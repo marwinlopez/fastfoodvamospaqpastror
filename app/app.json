@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Fast Food",
+    "slug": "JL Fast Food",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/JLLogo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/JLLogo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000200"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#5802F1"
+      },
+      "package": "com.marwinlopez.jlfastfood"
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#5802F1",
+      "barStyle": "light-content",
+      "hidden": true
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#5802F1",
+      "barStyle": "light-content"
+    },
+    "web": {
+      "favicon": "./assets/JLLogo.png.png"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+const express = require('express')
+const morgan = require('morgan')
+var cors = require('cors')
+const bp = require("body-parser");
+const app = express();
+
+const routes = require("./routes");
+
+app.use(cors());
+app.use(bp.urlencoded({ extended: true }));
+app.use(bp.json());
+app.use(morgan('dev'))
+app.use(express.urlencoded({ extended: false }));
+
+routes(app);
+
+module.exports = app;
