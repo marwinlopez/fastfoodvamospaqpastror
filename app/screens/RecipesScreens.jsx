@@ -29,20 +29,17 @@ const RecipesScreens = ({ navigation, route }) => {
     dispatch(actionCreators.loading());
     apis.recipeAll()
       .then(({ data }) => {
-        // En caso de que el backend responda con un listado directo o empaquetado
         const recipesList = data?.recipes || (Array.isArray(data) ? data : null);
         const success = data?.success || Array.isArray(data);
 
-        if (success && recipesList && recipesList.length > 0) {
+        if (success && recipesList) {
           dispatch(actionCreators.success(recipesList));
         } else {
-          // Si el éxito es falso o el listado viene vacío, usamos los datos mock de respaldo
-          dispatch(actionCreators.success(MOCK_RECIPES));
+          dispatch(actionCreators.success([]));
         }
       })
       .catch((error) => {
         console.log("Error al obtener recetas de la API (usando fallback mock):", error);
-        // Si hay un error de red o servidor, cargamos las recetas mock de respaldo
         dispatch(actionCreators.success(MOCK_RECIPES));
       });
   };

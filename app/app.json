@@ -8,9 +8,9 @@
     "icon": "./assets/JLLogo.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/JLLogo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000200"
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0b1828"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -24,17 +24,17 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#5802F1"
+        "backgroundColor": "#0b1828"
       },
       "package": "com.marwinlopez.jlfastfood"
     },
     "androidStatusBar": {
-      "backgroundColor": "#5802F1",
+      "backgroundColor": "#0b1828",
       "barStyle": "light-content",
       "hidden": true
     },
     "androidNavigationBar": {
-      "backgroundColor": "#5802F1",
+      "backgroundColor": "#0b1828",
       "barStyle": "light-content"
     },
     "web": {
