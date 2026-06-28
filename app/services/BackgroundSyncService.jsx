@@ -120,6 +120,8 @@ export const BackgroundSyncService = {
             await apis.newRecipe(action.payload);
           } else if (action.type === "newIngredient") {
             await apis.newIngredient(action.payload);
+          } else if (action.type === "newProduct") {
+            await apis.createProduct(action.payload);
           }
           console.log(
             `[SyncService] Acción de cola sincronizada: ${action.type}`

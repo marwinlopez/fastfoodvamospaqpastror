@@ -179,9 +179,8 @@ const MaterialsScreens = ({ navigation, route }) => {
       <FAB
         visible={true}
         onPress={() =>
-          navigation.push("RecipeScreen", {
-            route: "newRecipe",
-            recipe: null,
+          navigation.push("NewProductScreen", {
+            recipe: recipe,
           })
         }
         placement="right"
