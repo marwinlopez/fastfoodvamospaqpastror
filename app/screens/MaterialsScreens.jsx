@@ -241,6 +241,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
     // Sombras premium sutiles (Efecto Canvas)
     shadowColor: "#1A1D20",
     shadowOffset: { width: 0, height: 6 },
@@ -273,7 +275,7 @@ const styles = StyleSheet.create({
   },
   priceBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#F3F4F6", // Fondo gris suave neutral
+    backgroundColor: "#E6F4EA", // Verde suave Canvas
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -281,7 +283,7 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#4B5563",
+    color: "#137333", // Verde destacado
   },
   cardRight: {
     justifyContent: "center",

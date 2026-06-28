@@ -86,7 +86,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    height: 44,
+    minHeight: 48,
+    paddingVertical: 4,
   },
   actionLeftContainer: {
     width: 44,
