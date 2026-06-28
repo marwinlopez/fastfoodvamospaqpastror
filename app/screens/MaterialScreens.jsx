@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useReducer } from "react";
 import {
   Alert,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   ToastAndroid,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
 import { COLORS } from "../constants/themes";
 import apis from "../apis";

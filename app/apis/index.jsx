@@ -5,7 +5,7 @@ const api = axios.create({
   timeout: 5000,
 });
 
-export const allProducts = () => api.get("/product/");
+export const allProducts = () => api.get("/product/get-all");
 export const productForId = (id) => api.get(`/product/${id}`);
 export const recipeForId = (id) => api.get(`/recipe/${id}`);
 export const recipeAll = () => api.get(`/recipe/`);
