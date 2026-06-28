@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://192.168.0.101:8080/api",
-  timeout: 500, // Timeout de 2 segundos para evitar que la UI se cuelgue si el servidor no responde
+  baseURL: "http://192.168.1.5:8080/api",
+  timeout: 5000,
 });
 
 export const allProducts = () => api.get("/product/");
