@@ -37,13 +37,21 @@ const HomeScreens = ({ navigation }) => {
       color: "#059669",
       description: "Carta y productos de comida",
     },
+    // {
+    //   id: 4,
+    //   item: "Mesas",
+    //   url: "TableScreen",
+    //   icon: "grid",
+    //   color: "#2563EB",
+    //   description: "Ver estado de las mesas",
+    // },
     {
       id: 4,
-      item: "Mesas",
-      url: "TableScreen",
-      icon: "grid",
+      item: "Productos",
+      url: "MaterialsScreen",
+      icon: "book",
       color: "#2563EB",
-      description: "Ver estado de las mesas",
+      description: "Ver listado de productos",
     },
   ];
 

@@ -22,27 +22,28 @@ import apis from "../apis";
 import { Feather } from "@expo/vector-icons";
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
 
-const MOCK_PRODUCTS = [
-  { productId: 1, producto: "Carne de Hamburguesa 150g", precioCompra: 1.2 },
-  { productId: 2, producto: "Pan de Hamburguesa Ajonjolí", precioCompra: 0.3 },
-  { productId: 3, producto: "Queso Cheddar Tajado", precioCompra: 0.15 },
-  { productId: 4, producto: "Tocino Ahumado (Porción)", precioCompra: 0.5 },
-  { productId: 5, producto: "Papas Fritas Medianas", precioCompra: 1.1 },
-  { productId: 6, producto: "Salsa PA Q' Pastor", precioCompra: 0.25 },
-];
+// const MOCK_PRODUCTS = [
+//   { productId: 1, producto: "Carne de Hamburguesa 150g", precioCompra: 1.2 },
+//   { productId: 2, producto: "Pan de Hamburguesa Ajonjolí", precioCompra: 0.3 },
+//   { productId: 3, producto: "Queso Cheddar Tajado", precioCompra: 0.15 },
+//   { productId: 4, producto: "Tocino Ahumado (Porción)", precioCompra: 0.5 },
+//   { productId: 5, producto: "Papas Fritas Medianas", precioCompra: 1.1 },
+//   { productId: 6, producto: "Salsa PA Q' Pastor", precioCompra: 0.25 },
+// ];
 
 const MaterialsScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(MaterialsReducer, initialState);
   const [products, setProducts] = useState(state.products);
   const [refreshing] = useState(false);
-  const { recipe } = route.params;
-
+  const { recipe } = route.params || {};
+  
   const backActionHandler = () => {
     redirectActionLeft();
     return true;
   };
-
+  
   useEffect(() => {
+    console.log({ navigation, route })
     BackHandler.addEventListener("hardwareBackPress", backActionHandler);
     return () =>
       BackHandler.removeEventListener("hardwareBackPress", backActionHandler);
@@ -53,9 +54,10 @@ const MaterialsScreens = ({ navigation, route }) => {
     const cached = await BackgroundSyncService.getCachedProducts();
     if (cached && cached.length > 0) {
       dispatch(actionCreators.success(cached));
-    } else {
-      dispatch(actionCreators.success(MOCK_PRODUCTS));
     }
+    // else {
+    //   dispatch(actionCreators.success(MOCK_PRODUCTS));
+    // }
 
     // 2. Traer en segundo plano/asíncronamente la última versión del servidor
     try {
@@ -83,13 +85,11 @@ const MaterialsScreens = ({ navigation, route }) => {
   const { loading, error } = state;
 
   const redirectActionLeft = () => {
-    let route = "";
-    if (recipe.recipeId > 0) {
-      route = "materialsAdd";
+    if (recipe && recipe.recipeId > 0) {
+      navigation.push("RecipeScreen", { route: "materialsAdd", recipe: recipe });
     } else {
-      route = "newRecipe";
+      navigation.navigate("HomeScreen");
     }
-    navigation.push("RecipeScreen", { route: route, recipe: recipe });
   };
 
   const handleSearch = (text) => {
@@ -104,11 +104,14 @@ const MaterialsScreens = ({ navigation, route }) => {
     setProducts(filtered);
   };
 
+  const addIngredients = () => {
+    navigation.navigate("MaterialScreens", { recipe: recipe });
+  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <Header
-        title={"AÑADIR A LA RECETA"}
+        title={recipe ? "AÑADIR A LA RECETA" : "PRODUCTOS"}
         buttonLeft={"arrow-left"}
         actionLeft={redirectActionLeft}
         isSearch={true}
@@ -137,11 +140,13 @@ const MaterialsScreens = ({ navigation, route }) => {
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => {
-                  navigation.push("MaterialScreen", {
-                    route: "addMaterial",
-                    product: item,
-                    recipe: recipe,
-                  });
+                  if (recipe) {
+                    navigation.push("MaterialScreen", {
+                      route: "addMaterial",
+                      product: item,
+                      recipe: recipe,
+                    });
+                  }
                 }}
                 style={styles.card}
               >
@@ -158,9 +163,11 @@ const MaterialsScreens = ({ navigation, route }) => {
                     </View>
                   </View>
                 </View>
-                <View style={styles.cardRight}>
-                  <Feather name="plus-circle" size={22} color="#5802F1" />
-                </View>
+                {recipe && (
+                  <View style={styles.cardRight}>
+                    <Feather name="plus-circle" size={22} color="#5802F1" />
+                  </View>
+                )}
               </TouchableOpacity>
             )}
             refreshControl={
@@ -179,9 +186,10 @@ const MaterialsScreens = ({ navigation, route }) => {
       <FAB
         visible={true}
         onPress={() =>
-          navigation.push("NewProductScreen", {
-            recipe: recipe,
-          })
+          // navigation.push("NewProductScreen", {
+          //   recipe: recipe,
+          // })
+          console.log(recipe)
         }
         placement="right"
         title="Nuevo Producto"
