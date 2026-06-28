@@ -40,9 +40,6 @@
     "web": {
       "favicon": "./assets/JLLogo.png"
     },
-    "plugins": [
-      "expo-barcode-scanner",
-      "expo-sqlite"
-    ]
+    "plugins": []
   }
 }
