@@ -22,26 +22,17 @@ import apis from "../apis";
 import { Feather } from "@expo/vector-icons";
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
 
-const MOCK_PRODUCTS = [
-  { productId: 1, producto: "Carne de Hamburguesa 150g", precioCompra: 1.2 },
-  { productId: 2, producto: "Pan de Hamburguesa Ajonjolí", precioCompra: 0.3 },
-  { productId: 3, producto: "Queso Cheddar Tajado", precioCompra: 0.15 },
-  { productId: 4, producto: "Tocino Ahumado (Porción)", precioCompra: 0.5 },
-  { productId: 5, producto: "Papas Fritas Medianas", precioCompra: 1.1 },
-  { productId: 6, producto: "Salsa PA Q' Pastor", precioCompra: 0.25 },
-];
-
 const MaterialsScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(MaterialsReducer, initialState);
   const [products, setProducts] = useState(state.products);
   const [refreshing] = useState(false);
   const { recipe } = route.params || {};
-  
+
   const backActionHandler = () => {
     redirectActionLeft();
     return true;
   };
-  
+
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
@@ -75,8 +66,8 @@ const MaterialsScreens = ({ navigation, route }) => {
         error
       );
       if (!cached || cached.length === 0) {
-        // Si no hay internet y no hay caché, caemos a MOCK_PRODUCTS para evitar colgar la app
-        dispatch(actionCreators.success(MOCK_PRODUCTS));
+        // Si no hay internet y no hay caché, despachamos vacío para quitar el spinner
+        dispatch(actionCreators.success([]));
       }
     }
   };
