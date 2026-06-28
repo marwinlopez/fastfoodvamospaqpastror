@@ -21,6 +21,7 @@ import MaterialsReducer, {
 import apis from "../apis";
 import { Feather } from "@expo/vector-icons";
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const MaterialsScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(MaterialsReducer, initialState);
@@ -42,6 +43,16 @@ const MaterialsScreens = ({ navigation, route }) => {
   }, []);
 
   const fetchMaterials = async () => {
+    // Helper: deduplica por productId, dando prioridad al último elemento visto
+    const deduplicateById = (list) => {
+      const seen = new Map();
+      list.forEach((p) => {
+        const id = p.productId || p.id || p.productoId;
+        if (id) seen.set(id.toString(), p);
+      });
+      return Array.from(seen.values());
+    };
+
     // 1. Cargar de la caché local para evitar bloquear la pantalla
     const cached = await BackgroundSyncService.getCachedProducts();
     if (cached && cached.length > 0) {
@@ -50,7 +61,7 @@ const MaterialsScreens = ({ navigation, route }) => {
         productId: p.productId || p.id || p.productoId || Date.now().toString(),
         productoId: p.productId || p.id || p.productoId,
       }));
-      dispatch(actionCreators.success(mappedCached));
+      dispatch(actionCreators.success(deduplicateById(mappedCached)));
     }
 
     // 2. Traer en segundo plano la última versión del servidor
@@ -65,8 +76,15 @@ const MaterialsScreens = ({ navigation, route }) => {
           productId: p.productId || p.id || p.productoId || Date.now().toString(),
           productoId: p.productId || p.id || p.productoId,
         }));
-        dispatch(actionCreators.success(mappedList));
-        BackgroundSyncService.preloadCatalogCache(); // Actualizar caché local
+        // El servidor es la fuente de verdad: reemplaza la caché con datos deduplicados
+        const deduped = deduplicateById(mappedList);
+        dispatch(actionCreators.success(deduped));
+        // Reemplazar caché local con los datos limpios del servidor
+        await AsyncStorage.setItem(
+          "products_cache",
+          JSON.stringify(deduped)
+        );
+        BackgroundSyncService.preloadCatalogCache(); // Actualizar caché compartida
       } else if (!cached || cached.length === 0) {
         dispatch(actionCreators.success([]));
       }
