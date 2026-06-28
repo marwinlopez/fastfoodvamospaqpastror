@@ -3,7 +3,7 @@
     "name": "Fast Food",
     "slug": "JL Fast Food",
     "version": "1.0.0",
-    "sdkVersion": "51.0.0",
+    "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/JLLogo.png",
     "userInterfaceStyle": "light",

@@ -3,6 +3,7 @@ import {
   FlatList,
   Image,
   SafeAreaView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -53,73 +54,29 @@ const Menu = [
 
 const HomeScreens = ({ navigation, route }) => {
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <Grid>
+    <SafeAreaView style={styles.container}>
+      <Grid style={styles.grid}>
         <Header title={"jl fast food"} />
-        <Row style={{ height: 40 }}>
+        <Row style={styles.menuButtonRow}>
           <MenuButton />
         </Row>
-        <Row
-          style={{
-            margin: 0,
-          }}
-        >
+        <Row style={styles.listContainerRow}>
           <FlatList
             data={Menu}
-            style={{
-              paddingHorizontal: 10,
-            }}
+            contentContainerStyle={styles.list}
             renderItem={({ index, item }) => (
               <TouchableOpacity
                 onPress={() => navigation.navigate(item.url, item.params)}
-                style={{
-                  aspectRatio: 1.05,
-                  width: "49.5%",
-                  marginRight: index % 2 !== 0 ? 0 : 5,
-                  marginTop: 10,
-                  marginBottom: 4,
-                  padding: 1,
-                  position: "relative",
-                  backgroundColor: COLORS.lightGrey,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  borderRadius: 10,
-                  borderColor: COLORS.default,
-                  borderWidth: 2,
-                }}
+                style={styles.card}
               >
-                <View
-                  style={{
-                    width: "100%",
-                    height: "90%",
-                  }}
-                >
+                <View style={styles.imageContainer}>
                   <Image
-                    resizeMode="center"
-                    style={{
-                      width: "100%",
-                      height: "90%",
-                      marginTop: 5,
-                      borderTopLeftRadius: 10,
-                      borderTopRightRadius: 10,
-                    }}
+                    resizeMode="contain"
+                    style={styles.image}
                     source={item.source}
                   />
                 </View>
-                <Text
-                  style={{
-                    width: "100%",
-                    textAlign: "center",
-                    color: item.disposable ? COLORS.white : COLORS.white,
-                    backgroundColor: COLORS.default,
-                    borderBottomLeftRadius: 8,
-                    borderBottomRightRadius: 8,
-                    bottom: 1,
-                    fontSize: 15,
-                    fontWeight: "bold",
-                    textTransform: "uppercase",
-                  }}
-                >
+                <Text style={styles.cardTitle}>
                   {item.item}
                 </Text>
               </TouchableOpacity>
@@ -131,5 +88,66 @@ const HomeScreens = ({ navigation, route }) => {
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA", // Fondo limpio del lienzo
+  },
+  grid: {
+    flex: 1,
+  },
+  menuButtonRow: {
+    height: 48,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  listContainerRow: {
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  list: {
+    paddingBottom: 24,
+  },
+  card: {
+    flex: 1,
+    aspectRatio: 0.98,
+    backgroundColor: COLORS.white,
+    margin: 8,
+    borderRadius: 20, // Bordes redondeados pronunciados
+    padding: 16, // Espaciado interno amplio
+    justifyContent: "space-between",
+    alignItems: "center",
+    // Sombras sutiles y elegantes (Efecto Canvas)
+    shadowColor: "#1A1D20",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  imageContainer: {
+    width: "100%",
+    height: "75%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA", // Fondo suave para destacar la imagen
+    borderRadius: 16,
+    padding: 8,
+  },
+  image: {
+    width: "90%",
+    height: "90%",
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#212529", // Jerarquía y contraste moderno
+    textAlign: "center",
+    marginTop: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+});
 
 export default HomeScreens;
