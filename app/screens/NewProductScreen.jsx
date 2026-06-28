@@ -49,6 +49,17 @@ const NewProductScreen = ({ navigation, route }) => {
         }
       } catch (err) {
         console.log("[NewProductScreen] Falló pre-carga de unidades:", err);
+        if (!cached || cached.length <= 1) {
+          setUnits([
+            "Seleccionar...",
+            "Gramos",
+            "Kilogramos",
+            "Unidades",
+            "Mililitros",
+            "Litros",
+            "Libras",
+          ]);
+        }
       }
     };
     loadUnits();

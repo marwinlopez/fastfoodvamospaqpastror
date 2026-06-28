@@ -145,7 +145,7 @@ module.exports = (app) => {
   });
 
   // --- Endpoints de Unidades de Medida ---
-  app.get("/api/unit", async (req, res, next) => {
+  app.get(["/api/unit", "/api/unit/"], async (req, res, next) => {
     try {
       const snapshot = await db.collection("units").get();
       let units = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
