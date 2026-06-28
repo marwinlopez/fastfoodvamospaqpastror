@@ -24,9 +24,8 @@ import { BackgroundSyncService } from "../services/BackgroundSyncService";
 
 const MaterialScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(MaterialReducer, stateIngredients);
-  const [disabled, setDisabled] = useState(true);
   const [isAdd, setIsAdd] = useState(false);
-  const [quantity, setQuantity] = useState(0);
+  const [quantity, setQuantity] = useState("");
   const [isError, setIsError] = useState(false);
   const [selectedValue, setSelectedValue] = useState({
     id: 0,
@@ -86,6 +85,25 @@ const MaterialScreens = ({ navigation, route }) => {
 
   const { ingredient, recipe, unitOf, product } = state;
 
+  useEffect(() => {
+    if (ingredient) {
+      if (ingredient.quantity !== undefined && ingredient.quantity !== null) {
+        setQuantity(ingredient.quantity.toString());
+      }
+      if (ingredient.unitOfMeasurement) {
+        setSelectedValue({
+          id: ingredient.unitOfMeasurementId || 0,
+          name: ingredient.unitOfMeasurement,
+        });
+      }
+    }
+  }, [ingredient]);
+
+  const disabled =
+    !quantity ||
+    quantity.toString().trim() === "" ||
+    selectedValue.name === "Seleccionar...";
+
   const fetchUnitOfMeasurement = async () => {
     // 1. Cargar de la caché local para evitar bloquear la pantalla
     const cached = await BackgroundSyncService.getCachedUnits();
@@ -118,7 +136,6 @@ const MaterialScreens = ({ navigation, route }) => {
   };
 
   const onSelect = (item, index) => {
-    setDisabled(index == 0);
     setSelectedValue({ id: index, name: item });
   };
 
@@ -282,7 +299,6 @@ const MaterialScreens = ({ navigation, route }) => {
               placeholder="Ej. 1.5"
               onChangeText={(text) => {
                 setQuantity(text);
-                setDisabled(selectedValue.id == 0 || text == "");
               }}
             />
           </View>
