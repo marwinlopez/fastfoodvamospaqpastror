@@ -3,67 +3,35 @@ import GlobalReducer, {
   actionCreators,
   initialState,
 } from "../hooks/GlobalReducer";
-import { ActivityIndicator, View } from "react-native";
-import apis from "../apis";
+import { BackgroundSyncService } from "../services/BackgroundSyncService";
 
 const GlobalContext = createContext();
-const { Provider, Consumer } = GlobalContext;
-// const INITIAL_STATE = {
-//   user: null,
-//   token: null,
-//   products: [],
-//   recipes: [],
-//   routeName: "index",
-//   ordering: [],
-//   locations: [],
-//   isNewOrder: [],
-//   newRecipe: null,
-//   cardSelected: {},
-//   isLoading: false,
-//   tab: 0,
-//   decimalPrecission: 2,
-// };
+const { Provider } = GlobalContext;
 
 const GlobalProvider = ({ children }) => {
   const [state, dispatch] = useReducer(GlobalReducer, initialState);
 
   useEffect(() => {
-    dispatch(actionCreators.loading());
+    const initializeApp = async () => {
+      dispatch(actionCreators.loading());
+      try {
+        // 1. Iniciar pre-carga de catálogos en segundo plano
+        BackgroundSyncService.preloadCatalogCache();
 
-    // async function fetchMaterials() {
-    //   try {
-    //     const { data } = await apis.allProducts();
-    //     console.log(data);
-    //     dispatch(actionCreators.success(data));
-    //   } catch (error) {}
-    // }
-
-    return () => {
-      setTimeout(() => {
-        // fetchMaterials();
+        // 2. Intentar procesar cola de sincronización pendiente
+        BackgroundSyncService.processSyncQueue();
+      } catch (error) {
+        console.log("[GlobalContext] Error en inicialización:", error);
+      } finally {
         dispatch(actionCreators.success({}));
-      }, 6000);
+      }
     };
-  }, []);
 
-  // const value = useMemo(
-  //   () => ({
-  //     ordering: state.ordering,
-  //     isNewOrder: state.isNewOrder,
-  //     tabActive: state.tab,
-  //     recipes: state.recipes,
-  //     recipe,
-  //     routeName: state.routeName,
-  //     getRecipe,
-  //     setRecipe,
-  //     dispatch,
-  //   }),
-  //   [state]
-  // );
+    initializeApp();
+  }, []);
 
   const value = {
     state,
-
     dispatch,
   };
 

@@ -33,8 +33,12 @@ const RecipeScreens = ({ navigation, route }) => {
           });
           break;
         case "materialsAdd":
-          const { recipeId } = route.params;
-          getRecipeId(recipeId);
+          const { recipeId, recipe: localRecipe } = route.params;
+          if (localRecipe) {
+            dispatch(actionCreators.success(localRecipe));
+          } else {
+            getRecipeId(recipeId);
+          }
           break;
         case "newRecipe":
           dispatch(actionCreators.loading());
@@ -55,10 +59,15 @@ const RecipeScreens = ({ navigation, route }) => {
   };
 
   const getRecipeId = (id) => {
-    apis.recipeForId(id).then(({ data }) => {
-      const { recipe } = data;
-      dispatch(actionCreators.success(recipe));
-    });
+    apis.recipeForId(id)
+      .then(({ data }) => {
+        const { recipe } = data;
+        dispatch(actionCreators.success(recipe));
+      })
+      .catch((error) => {
+        console.log("Error al cargar receta por ID (deteniendo loading):", error);
+        dispatch(actionCreators.failure());
+      });
   };
 
   const addIngredients = () => {

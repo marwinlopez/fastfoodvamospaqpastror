@@ -20,6 +20,7 @@ import MaterialsReducer, {
 } from "../hooks/MaterialsReducer";
 import apis from "../apis";
 import { Feather } from "@expo/vector-icons";
+import { BackgroundSyncService } from "../services/BackgroundSyncService";
 
 const MOCK_PRODUCTS = [
   { productId: 1, producto: "Carne de Hamburguesa 150g", precioCompra: 1.2 },
@@ -48,7 +49,15 @@ const MaterialsScreens = ({ navigation, route }) => {
   }, []);
 
   const fetchMaterials = async () => {
-    dispatch(actionCreators.loading());
+    // 1. Cargar instantáneamente de la caché local para evitar bloquear la pantalla
+    const cached = await BackgroundSyncService.getCachedProducts();
+    if (cached && cached.length > 0) {
+      dispatch(actionCreators.success(cached));
+    } else {
+      dispatch(actionCreators.success(MOCK_PRODUCTS));
+    }
+
+    // 2. Traer en segundo plano/asíncronamente la última versión del servidor
     try {
       const { data } = await apis.allProducts();
       const productsList = data?.products || (Array.isArray(data) ? data : null);
@@ -56,12 +65,10 @@ const MaterialsScreens = ({ navigation, route }) => {
 
       if (success && productsList && productsList.length > 0) {
         dispatch(actionCreators.success(productsList));
-      } else {
-        dispatch(actionCreators.success(MOCK_PRODUCTS));
+        BackgroundSyncService.preloadCatalogCache(); // Actualizar caché local
       }
     } catch (error) {
-      console.log("Error al obtener productos/materiales (usando mock):", error);
-      dispatch(actionCreators.success(MOCK_PRODUCTS));
+      console.log("[MaterialsScreens] Sincronización asíncrona de fondo falló (usando caché):", error);
     }
   };
 

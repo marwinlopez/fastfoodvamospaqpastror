@@ -20,6 +20,7 @@ import SelectDropdown from "react-native-select-dropdown";
 import { Button } from "@rneui/themed";
 import { Feather } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { BackgroundSyncService } from "../services/BackgroundSyncService";
 
 const MaterialScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(MaterialReducer, stateIngredients);
@@ -85,15 +86,28 @@ const MaterialScreens = ({ navigation, route }) => {
 
   const { ingredient, recipe, unitOf, product } = state;
 
-  const fetchUnitOfMeasurement = () => {
-    apis.unitOfMeasurements().then(({ data }) => {
+  const fetchUnitOfMeasurement = async () => {
+    // 1. Cargar de la caché local para evitar bloquear la pantalla
+    const cached = await BackgroundSyncService.getCachedUnits();
+    if (cached && cached.length > 1) {
+      dispatch(actionCreators.unitof(cached));
+    }
+
+    // 2. Traer en segundo plano/asíncronamente la última versión del servidor
+    try {
+      const { data } = await apis.unitOfMeasurements();
       const { unitOf } = data;
-      const unit = ["Seleccionar..."];
-      unitOf.forEach(({ name }) => {
-        unit.push(name);
-      });
-      dispatch(actionCreators.unitof(unit));
-    });
+      if (unitOf && unitOf.length > 0) {
+        const unit = ["Seleccionar..."];
+        unitOf.forEach(({ name }) => {
+          unit.push(name);
+        });
+        dispatch(actionCreators.unitof(unit));
+        BackgroundSyncService.preloadCatalogCache(); // Actualizar caché local de fondo
+      }
+    } catch (error) {
+      console.log("[MaterialScreens] Sincronización asíncrona de fondo falló (usando caché):", error);
+    }
   };
 
   const redirectActionLeft = () => {
@@ -132,7 +146,7 @@ const MaterialScreens = ({ navigation, route }) => {
           id = recipe.recipeId;
         }
 
-        const resp = await actionCreators.addIngredient({
+        const ingredientPayload = {
           id: isAdd ? 0 : ingredient.idIngredient,
           recipeId: id,
           productId: product.productoId,
@@ -140,11 +154,41 @@ const MaterialScreens = ({ navigation, route }) => {
           quantityUnitOfMeasurement: quantity,
           fixedCost: 0,
           isActive: 1,
-        });
-        if (resp) {
+        };
+
+        // Intentar guardar en el servidor inmediatamente
+        try {
+          const resp = await actionCreators.addIngredient(ingredientPayload);
+          if (resp) {
+            navigation.push("RecipeScreen", {
+              route: "materialsAdd",
+              recipeId: id,
+            });
+          }
+        } catch (networkError) {
+          console.log("[MaterialScreens] Error de red. Encolando acción para procesarse en segundo plano.", networkError);
+          
+          // Encolar asíncronamente en segundo plano
+          await BackgroundSyncService.enqueueSyncAction("newIngredient", ingredientPayload);
+          
+          // Modificación local simulada
+          recipe.ingredients.push({
+            id: Date.now(),
+            description: product.producto,
+            priceProduct: product.precioCompra,
+            quantity: quantity,
+            unitOfMeasurement: selectedValue.name,
+          });
+
+          ToastAndroid.show(
+            "Guardado local (se sincronizará en segundo plano)",
+            ToastAndroid.LONG
+          );
+
           navigation.push("RecipeScreen", {
             route: "materialsAdd",
             recipeId: id,
+            recipe: recipe, // pasar receta modificada
           });
         }
       } catch (error) {
