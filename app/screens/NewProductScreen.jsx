@@ -5,6 +5,9 @@ import {
   Text,
   ToastAndroid,
   View,
+  Modal,
+  TouchableOpacity,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
@@ -16,6 +19,7 @@ import { Button } from "@rneui/themed";
 import { Feather } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
+import { BarCodeScanner } from "expo-barcode-scanner";
 
 const NewProductScreen = ({ navigation, route }) => {
   const { recipe, product } = route.params || {};
@@ -30,6 +34,14 @@ const NewProductScreen = ({ navigation, route }) => {
       : { id: 0, name: "Seleccionar..." }
   );
   const [loading, setLoading] = useState(false);
+
+  // Estados del escáner y código de barras
+  const [barcode, setBarcode] = useState(product ? product.codigoBarra || "" : "");
+  const [barcodeExists, setBarcodeExists] = useState(false);
+  const [scanned, setScanned] = useState(false);
+  const [isScannerVisible, setIsScannerVisible] = useState(false);
+  const [hasPermission, setHasPermission] = useState(null);
+  const [existingProducts, setExistingProducts] = useState([]);
 
   useEffect(() => {
     const loadUnits = async () => {
@@ -85,6 +97,62 @@ const NewProductScreen = ({ navigation, route }) => {
     loadUnits();
   }, []);
 
+  useEffect(() => {
+    const loadExistingProducts = async () => {
+      const cached = await BackgroundSyncService.getCachedProducts();
+      if (cached && cached.length > 0) {
+        setExistingProducts(cached);
+      }
+      try {
+        const { data } = await apis.allProducts();
+        const list = data?.data || data?.products;
+        if (list && list.length > 0) {
+          setExistingProducts(list);
+        }
+      } catch (err) {
+        console.log("[NewProductScreen] Error cargando productos existentes:", err);
+      }
+    };
+    loadExistingProducts();
+  }, []);
+
+  const askForCameraPermission = async () => {
+    const { status } = await BarCodeScanner.requestPermissionsAsync();
+    setHasPermission(status === "granted");
+    if (status === "granted") {
+      setIsScannerVisible(true);
+      setScanned(false);
+    } else {
+      Alert.alert(
+        "Permiso Denegado",
+        "Se requiere acceso a la cámara para poder escanear códigos de barra."
+      );
+    }
+  };
+
+  const handleBarcodeChange = (text) => {
+    setBarcode(text);
+    if (!text || text.trim() === "") {
+      setBarcodeExists(false);
+      return;
+    }
+
+    const exists = existingProducts.some(
+      (p) =>
+        p.codigoBarra &&
+        p.codigoBarra.toString().trim() === text.trim() &&
+        (!product || (p.productId || p.id) !== (product.productId || product.id))
+    );
+    setBarcodeExists(exists);
+  };
+
+  const handleBarCodeScanned = ({ type, data }) => {
+    setScanned(true);
+    setIsScannerVisible(false);
+    handleBarcodeChange(data);
+    ToastAndroid.show(`Código escaneado: ${data}`, ToastAndroid.SHORT);
+  };
+
   const handleSave = async () => {
     if (
       !name.trim() ||
@@ -111,6 +179,7 @@ const NewProductScreen = ({ navigation, route }) => {
       cantidadEmpaque: parseFloat(qtyEmpaque),
       unidadMedida: selectedUnit.name,
       unidadMedidaId: selectedUnit.id,
+      codigoBarra: barcode.trim() !== "" ? barcode.trim() : null,
     };
 
     if (product) {
@@ -121,6 +190,7 @@ const NewProductScreen = ({ navigation, route }) => {
         cantidadEmpaque: updatedProductItem.cantidadEmpaque,
         unidadMedida: updatedProductItem.unidadMedida,
         unidadMedidaId: updatedProductItem.unidadMedidaId,
+        codigoBarra: updatedProductItem.codigoBarra,
       };
 
       try {
@@ -180,7 +250,8 @@ const NewProductScreen = ({ navigation, route }) => {
     price.length > 0 &&
     qtyPresentacion.length > 0 &&
     qtyEmpaque.length > 0 &&
-    selectedUnit.name !== "Seleccionar...";
+    selectedUnit.name !== "Seleccionar..." &&
+    !barcodeExists;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -205,6 +276,31 @@ const NewProductScreen = ({ navigation, route }) => {
               value={name}
               onChangeText={setName}
             />
+          </View>
+
+          {/* Código de Barra */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Código de Barra</Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flex: 1 }}>
+                <NebulaTextInput
+                  placeholder="Ej. 750123456789"
+                  value={barcode}
+                  onChangeText={handleBarcodeChange}
+                />
+              </View>
+              <TouchableOpacity
+                onPress={askForCameraPermission}
+                style={styles.scanButton}
+              >
+                <Feather name="camera" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+            {barcodeExists && (
+              <Text style={styles.errorText}>
+                ⚠️ Este código de barra ya está registrado.
+              </Text>
+            )}
           </View>
 
           {/* Precio de Compra */}
@@ -294,6 +390,30 @@ const NewProductScreen = ({ navigation, route }) => {
           />
         </View>
       </KeyboardAwareScrollView>
+
+      {/* Modal del Escáner */}
+      <Modal
+        visible={isScannerVisible}
+        animationType="slide"
+        onRequestClose={() => setIsScannerVisible(false)}
+      >
+        <View style={styles.scannerModalContainer}>
+          <BarCodeScanner
+            onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={styles.scannerOverlay}>
+            <Text style={styles.scannerText}>
+              Apunta con la cámara al código de barra del producto
+            </Text>
+            <Button
+              title="Cancelar"
+              onPress={() => setIsScannerVisible(false)}
+              buttonStyle={styles.cancelScannerButton}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -387,6 +507,48 @@ const styles = StyleSheet.create({
   buttonTitle: {
     fontSize: 14,
     fontWeight: "700",
+  },
+  scanButton: {
+    backgroundColor: "#5802F1",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 14,
+    width: 46,
+    height: 46,
+    marginLeft: 8,
+  },
+  errorText: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 6,
+  },
+  scannerModalContainer: {
+    flex: 1,
+    backgroundColor: "black",
+  },
+  scannerOverlay: {
+    position: "absolute",
+    bottom: 40,
+    left: 20,
+    right: 20,
+    alignItems: "center",
+  },
+  scannerText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 20,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 10,
+    borderRadius: 8,
+  },
+  cancelScannerButton: {
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 14,
   },
 });
 

@@ -18,15 +18,19 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0b1828"
       },
-      "package": "com.marwinlopez.jlfastfood"
+      "package": "com.marwinlopez.jlfastfood",
+      "permissions": ["android.permission.CAMERA"]
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Esta app usa la cámara para escanear códigos de barra de productos."
+      }
     },
     "androidStatusBar": {
       "backgroundColor": "#0b1828",
@@ -40,6 +44,6 @@
     "web": {
       "favicon": "./assets/JLLogo.png"
     },
-    "plugins": []
+    "plugins": ["expo-barcode-scanner"]
   }
 }
