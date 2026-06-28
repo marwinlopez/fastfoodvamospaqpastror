@@ -2,12 +2,12 @@ import React from "react";
 import {
   FlatList,
   Image,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Col, Grid, Row } from "react-native-easy-grid";
 import { COLORS } from "../src/constants/themes";
 import NebulaTextInput from "../src/components/NebulaTextInput";
@@ -54,7 +54,7 @@ const Menu = [
 
 const HomeScreens = ({ navigation, route }) => {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <Grid style={styles.grid}>
         <Header title={"jl fast food"} />
         <Row style={styles.menuButtonRow}>
