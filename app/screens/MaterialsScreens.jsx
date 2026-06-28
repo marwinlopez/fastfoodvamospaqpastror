@@ -56,8 +56,8 @@ const MaterialsScreens = ({ navigation, route }) => {
     // 2. Traer en segundo plano la última versión del servidor
     try {
       const { data } = await apis.allProducts();
-      const productsList = data?.products || (Array.isArray(data) ? data : null);
-      const success = data?.success || Array.isArray(data);
+      const productsList = data?.data || data?.products || (Array.isArray(data) ? data : null);
+      const success = data?.status || data?.success || Array.isArray(data);
 
       if (success && productsList && productsList.length > 0) {
         const mappedList = productsList.map((p) => ({

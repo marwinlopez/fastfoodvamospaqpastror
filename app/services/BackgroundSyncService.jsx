@@ -21,6 +21,7 @@ export const BackgroundSyncService = {
 
       if (productsRes.status === "fulfilled" && productsRes.value?.data) {
         const productsList =
+          productsRes.value.data?.data ||
           productsRes.value.data?.products ||
           (Array.isArray(productsRes.value.data) ? productsRes.value.data : []);
 
