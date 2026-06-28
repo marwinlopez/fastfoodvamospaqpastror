@@ -37,6 +37,12 @@ const NewProductScreen = ({ navigation, route }) => {
       const cached = await BackgroundSyncService.getCachedUnits();
       if (cached && cached.length > 1) {
         setUnits(cached);
+        if (product && product.unidadMedida) {
+          const idx = cached.indexOf(product.unidadMedida);
+          if (idx !== -1) {
+            setSelectedUnit({ id: idx, name: product.unidadMedida });
+          }
+        }
       }
 
       // 2. Carga asíncrona de fondo
@@ -47,11 +53,17 @@ const NewProductScreen = ({ navigation, route }) => {
           const uNames = ["Seleccionar...", ...unitOf.map((u) => u.name || u)];
           setUnits(uNames);
           BackgroundSyncService.preloadCatalogCache();
+          if (product && product.unidadMedida) {
+            const idx = uNames.indexOf(product.unidadMedida);
+            if (idx !== -1) {
+              setSelectedUnit({ id: idx, name: product.unidadMedida });
+            }
+          }
         }
       } catch (err) {
         console.log("[NewProductScreen] Falló pre-carga de unidades:", err);
         if (!cached || cached.length <= 1) {
-          setUnits([
+          const fallbackUnits = [
             "Seleccionar...",
             "Gramos",
             "Kilogramos",
@@ -59,7 +71,14 @@ const NewProductScreen = ({ navigation, route }) => {
             "Mililitros",
             "Litros",
             "Libras",
-          ]);
+          ];
+          setUnits(fallbackUnits);
+          if (product && product.unidadMedida) {
+            const idx = fallbackUnits.indexOf(product.unidadMedida);
+            if (idx !== -1) {
+              setSelectedUnit({ id: idx, name: product.unidadMedida });
+            }
+          }
         }
       }
     };
@@ -72,7 +91,7 @@ const NewProductScreen = ({ navigation, route }) => {
       !price ||
       !qtyPresentacion ||
       !qtyEmpaque ||
-      selectedUnit.id === 0
+      selectedUnit.name === "Seleccionar..."
     ) {
       ToastAndroid.show(
         "Por favor, rellene todos los campos",
@@ -161,7 +180,7 @@ const NewProductScreen = ({ navigation, route }) => {
     price.length > 0 &&
     qtyPresentacion.length > 0 &&
     qtyEmpaque.length > 0 &&
-    selectedUnit.id > 0;
+    selectedUnit.name !== "Seleccionar...";
 
   return (
     <SafeAreaView style={styles.container}>
