@@ -1,90 +1,126 @@
 import React from "react";
 import {
-  FlatList,
-  Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Col, Grid, Row } from "react-native-easy-grid";
+import { Feather } from "@expo/vector-icons";
 import { COLORS } from "../src/constants/themes";
-import NebulaTextInput from "../src/components/NebulaTextInput";
-import Header from "../components/Header";
 import MenuButton from "../components/MenuButton";
 
-const Menu = [
-  {
-    id: 1,
-    item: "Recetas",
-    url: "RecipesScreen",
-    source: require("../assets/Menu.png"),
-    params: { recipe: null },
-  },
-  {
-    id: 2,
-    item: "Pedidos",
-    url: "OrderScreen",
-    source: require("../assets/pedidos.png"),
-    params: { item: null },
-  },
-  {
-    id: 3,
-    item: "Menu",
-    url: "MenuScreen",
-    source: require("../assets/menu-logo.png"),
-    params: { item: null },
-  },
-  {
-    id: 4,
-    item: "Mesas",
-    url: "TableScreen",
-    source: require("../assets/tables2.png"),
-    params: { item: null },
-  },
-  {
-    id: 5,
-    item: "Delivery",
-    url: "DeliveryScreen",
-    source: require("../assets/delivery.png"),
-    params: { item: null },
-  },
-];
+const HomeScreens = ({ navigation }) => {
+  const actions = [
+    {
+      id: 1,
+      item: "Recetas",
+      url: "RecipesScreen",
+      icon: "book-open",
+      color: "#5802F1",
+      description: "Ver recetas y preparaciones",
+    },
+    {
+      id: 2,
+      item: "Pedidos",
+      url: "OrderScreen",
+      icon: "shopping-bag",
+      color: "#F4511E",
+      description: "Gestionar órdenes activas",
+    },
+    {
+      id: 3,
+      item: "Menú",
+      url: "MenuScreen",
+      icon: "file-text",
+      color: "#059669",
+      description: "Carta y productos de comida",
+    },
+    {
+      id: 4,
+      item: "Mesas",
+      url: "TableScreen",
+      icon: "grid",
+      color: "#2563EB",
+      description: "Ver estado de las mesas",
+    },
+  ];
 
-const HomeScreens = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <Grid style={styles.grid}>
-        <Header title={"jl fast food"} />
-        <Row style={styles.menuButtonRow}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Encabezado Elegante y Personalizado */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.brandSubtitle}>PA Q' PASTOR</Text>
+            <Text style={styles.brandTitle}>¡Hola, Chef! 👋</Text>
+            <Text style={styles.greetingText}>¿Qué gestionamos hoy?</Text>
+          </View>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>PQ</Text>
+          </View>
+        </View>
+
+        {/* Fila del Botón de Menú de Configuración / Acceso Rápido */}
+        <View style={styles.menuRow}>
           <MenuButton />
-        </Row>
-        <Row style={styles.listContainerRow}>
-          <FlatList
-            data={Menu}
-            contentContainerStyle={styles.list}
-            renderItem={({ index, item }) => (
-              <TouchableOpacity
-                onPress={() => navigation.navigate(item.url, item.params)}
-                style={styles.card}
+        </View>
+
+        {/* Título de Sección */}
+        <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
+
+        {/* Cuadrícula 2x2 */}
+        <View style={styles.gridContainer}>
+          {actions.map((action) => (
+            <TouchableOpacity
+              key={action.id}
+              onPress={() => navigation.navigate(action.url, { recipe: null, item: null })}
+              style={styles.card}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.iconWrapper,
+                  { backgroundColor: `${action.color}15` },
+                ]}
               >
-                <View style={styles.imageContainer}>
-                  <Image
-                    resizeMode="contain"
-                    style={styles.image}
-                    source={item.source}
-                  />
-                </View>
-                <Text style={styles.cardTitle}>
-                  {item.item}
-                </Text>
-              </TouchableOpacity>
-            )}
-            numColumns={2}
-          />
-        </Row>
-      </Grid>
+                <Feather name={action.icon} size={26} color={action.color} />
+              </View>
+              <View style={styles.cardTextContent}>
+                <Text style={styles.cardTitle}>{action.item}</Text>
+                <Text style={styles.cardDescription}>{action.description}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Tarjeta de Servicio de Delivery Destacada */}
+        <Text style={styles.sectionTitle}>Servicios Integrados</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("DeliveryScreen", { item: null })}
+          style={styles.deliveryCard}
+          activeOpacity={0.8}
+        >
+          <View style={styles.deliveryLeft}>
+            <View style={styles.deliveryIconWrapper}>
+              <Feather name="truck" size={26} color="#5802F1" />
+            </View>
+            <View style={styles.deliveryTextContent}>
+              <Text style={styles.deliveryTitle}>Servicio de Delivery</Text>
+              <Text style={styles.deliveryDescription}>
+                Llevamos tus hamburguesas calientes a donde estés
+              </Text>
+            </View>
+          </View>
+          <View style={styles.deliveryRight}>
+            <Feather name="chevron-right" size={24} color="#8E9AA6" />
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -92,61 +128,157 @@ const HomeScreens = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA", // Fondo limpio del lienzo
+    backgroundColor: "#FAFAFA", // Fondo Canvas ultra-limpio
   },
-  grid: {
-    flex: 1,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 32,
   },
-  menuButtonRow: {
-    height: 48,
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  listContainerRow: {
-    flex: 1,
-    marginHorizontal: 10,
-  },
-  list: {
-    paddingBottom: 24,
-  },
-  card: {
-    flex: 1,
-    aspectRatio: 0.98,
-    backgroundColor: COLORS.white,
-    margin: 8,
-    borderRadius: 20, // Bordes redondeados pronunciados
-    padding: 16, // Espaciado interno amplio
+  header: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // Sombras sutiles y elegantes (Efecto Canvas)
-    shadowColor: "#1A1D20",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    marginTop: 20,
+    marginBottom: 16,
   },
-  imageContainer: {
-    width: "100%",
-    height: "75%",
+  brandSubtitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#5802F1",
+    textTransform: "uppercase",
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  brandTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#1A1D20",
+    letterSpacing: -0.5,
+  },
+  greetingText: {
+    fontSize: 14,
+    color: "#6C757D",
+    marginTop: 2,
+  },
+  avatarContainer: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#5802F1",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8F9FA", // Fondo suave para destacar la imagen
-    borderRadius: 16,
-    padding: 8,
+    shadowColor: "#5802F1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  image: {
-    width: "90%",
-    height: "90%",
+  avatarText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 14,
   },
-  cardTitle: {
+  menuRow: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#212529", // Jerarquía y contraste moderno
-    textAlign: "center",
-    marginTop: 10,
+    color: "#8E9AA6",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  gridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  card: {
+    width: "47.5%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    justifyContent: "space-between",
+    minHeight: 150,
+    // Sombras premium súper sutiles
+    shadowColor: "#1A1D20",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  iconWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  cardTextContent: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1D20",
+    marginBottom: 4,
+  },
+  cardDescription: {
+    fontSize: 11,
+    color: "#8E9AA6",
+    lineHeight: 14,
+  },
+  deliveryCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    shadowColor: "#1A1D20",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  deliveryLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  deliveryIconWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: "#5802F115",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  deliveryTextContent: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  deliveryTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1D20",
+    marginBottom: 2,
+  },
+  deliveryDescription: {
+    fontSize: 11,
+    color: "#6C757D",
+    lineHeight: 15,
+  },
+  deliveryRight: {
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 
