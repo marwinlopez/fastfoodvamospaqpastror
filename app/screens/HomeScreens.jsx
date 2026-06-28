@@ -66,9 +66,9 @@ const HomeScreens = ({ navigation }) => {
         </View>
 
         {/* Fila del Botón de Menú de Configuración / Acceso Rápido */}
-        <View style={styles.menuRow}>
+        {/* <View style={styles.menuRow}>
           <MenuButton />
-        </View>
+        </View> */}
 
         {/* Título de Sección */}
         <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
