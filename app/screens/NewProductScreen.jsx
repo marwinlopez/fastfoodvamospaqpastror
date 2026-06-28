@@ -19,7 +19,7 @@ import { Button } from "@rneui/themed";
 import { Feather } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
-import { BarCodeScanner } from "expo-barcode-scanner";
+import { CameraView, Camera } from "expo-camera";
 
 const NewProductScreen = ({ navigation, route }) => {
   const { recipe, product } = route.params || {};
@@ -117,7 +117,7 @@ const NewProductScreen = ({ navigation, route }) => {
   }, []);
 
   const askForCameraPermission = async () => {
-    const { status } = await BarCodeScanner.requestPermissionsAsync();
+    const { status } = await Camera.requestCameraPermissionsAsync();
     setHasPermission(status === "granted");
     if (status === "granted") {
       setIsScannerVisible(true);
@@ -146,7 +146,7 @@ const NewProductScreen = ({ navigation, route }) => {
     setBarcodeExists(exists);
   };
 
-  const handleBarCodeScanned = ({ type, data }) => {
+  const handleBarCodeScanned = ({ data }) => {
     setScanned(true);
     setIsScannerVisible(false);
     handleBarcodeChange(data);
@@ -398,8 +398,11 @@ const NewProductScreen = ({ navigation, route }) => {
         onRequestClose={() => setIsScannerVisible(false)}
       >
         <View style={styles.scannerModalContainer}>
-          <BarCodeScanner
-            onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+          <CameraView
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            barcodeScannerSettings={{
+              barcodeTypes: ["ean13", "ean8", "qr", "code128", "code39", "upc_a", "upc_e"],
+            }}
             style={StyleSheet.absoluteFillObject}
           />
           <View style={styles.scannerOverlay}>
