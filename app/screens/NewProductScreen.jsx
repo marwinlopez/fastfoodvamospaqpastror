@@ -18,16 +18,17 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
 
 const NewProductScreen = ({ navigation, route }) => {
-  const { recipe } = route.params || {};
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [qtyPresentacion, setQtyPresentacion] = useState("");
-  const [qtyEmpaque, setQtyEmpaque] = useState("1");
+  const { recipe, product } = route.params || {};
+  const [name, setName] = useState(product ? product.producto : "");
+  const [price, setPrice] = useState(product ? product.precioCompra?.toString() : "");
+  const [qtyPresentacion, setQtyPresentacion] = useState(product ? product.cantidadPresentacion?.toString() : "");
+  const [qtyEmpaque, setQtyEmpaque] = useState(product ? product.cantidadEmpaque?.toString() : "1");
   const [units, setUnits] = useState(["Seleccionar..."]);
-  const [selectedUnit, setSelectedUnit] = useState({
-    id: 0,
-    name: "Seleccionar...",
-  });
+  const [selectedUnit, setSelectedUnit] = useState(
+    product
+      ? { id: product.unidadMedidaId || 0, name: product.unidadMedida || "Seleccionar..." }
+      : { id: 0, name: "Seleccionar..." }
+  );
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -82,8 +83,9 @@ const NewProductScreen = ({ navigation, route }) => {
 
     setLoading(true);
 
-    const newProductItem = {
-      productId: Date.now().toString(),
+    const productId = product ? (product.productId || product.id) : Date.now().toString();
+    const updatedProductItem = {
+      productId: productId,
       producto: name.trim().toUpperCase(),
       precioCompra: parseFloat(price),
       cantidadPresentacion: parseFloat(qtyPresentacion),
@@ -92,13 +94,49 @@ const NewProductScreen = ({ navigation, route }) => {
       unidadMedidaId: selectedUnit.id,
     };
 
+    if (product) {
+      const updatePayload = {
+        producto: updatedProductItem.producto,
+        precioCompra: updatedProductItem.precioCompra,
+        cantidadPresentacion: updatedProductItem.cantidadPresentacion,
+        cantidadEmpaque: updatedProductItem.cantidadEmpaque,
+        unidadMedida: updatedProductItem.unidadMedida,
+        unidadMedidaId: updatedProductItem.unidadMedidaId,
+      };
+
+      try {
+        await apis.updateProduct(productId, updatePayload);
+        await BackgroundSyncService.updateProductInCache(productId, updatedProductItem);
+        ToastAndroid.show("Producto actualizado con éxito", ToastAndroid.SHORT);
+        navigation.push("MaterialsScreen", { recipe });
+      } catch (error) {
+        console.log(
+          "[NewProductScreen] Falló actualización de red. Encolando...",
+          error
+        );
+        await BackgroundSyncService.updateProductInCache(productId, updatedProductItem);
+        await BackgroundSyncService.enqueueSyncAction("editProduct", {
+          id: productId,
+          payload: updatePayload,
+        });
+        ToastAndroid.show(
+          "Guardado local (se sincronizará en segundo plano)",
+          ToastAndroid.LONG
+        );
+        navigation.push("MaterialsScreen", { recipe });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     const payload = {
-      products: [newProductItem],
+      products: [updatedProductItem],
     };
 
     try {
       await apis.createProduct(payload);
-      await BackgroundSyncService.addProductToCache(newProductItem);
+      await BackgroundSyncService.addProductToCache(updatedProductItem);
       ToastAndroid.show("Producto registrado con éxito", ToastAndroid.SHORT);
       navigation.push("MaterialsScreen", { recipe });
     } catch (error) {
@@ -106,7 +144,7 @@ const NewProductScreen = ({ navigation, route }) => {
         "[NewProductScreen] Error de red. Encolando producto...",
         error
       );
-      await BackgroundSyncService.addProductToCache(newProductItem);
+      await BackgroundSyncService.addProductToCache(updatedProductItem);
       await BackgroundSyncService.enqueueSyncAction("newProduct", payload);
       ToastAndroid.show(
         "Guardado local (se sincronizará en segundo plano)",
@@ -129,7 +167,7 @@ const NewProductScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <Header
-        title="REGISTRAR PRODUCTO"
+        title={product ? "EDITAR PRODUCTO" : "REGISTRAR PRODUCTO"}
         buttonLeft="arrow-left"
         actionLeft={() => navigation.push("MaterialsScreen", { recipe })}
       />
@@ -220,7 +258,7 @@ const NewProductScreen = ({ navigation, route }) => {
             buttonStyle={styles.buttonStyle}
             disabledStyle={styles.buttonDisabledStyle}
             disabledTitleStyle={styles.buttonDisabledTitleStyle}
-            title="Registrar Producto"
+            title={product ? "Guardar Cambios" : "Registrar Producto"}
             titleStyle={styles.buttonTitle}
             onPress={handleSave}
             icon={

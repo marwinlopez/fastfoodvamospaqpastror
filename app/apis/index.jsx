@@ -15,6 +15,7 @@ export const newIngredient = (payload) =>
 export const ingredientForId = (id) => api.get(`/ingredient/${id}`);
 export const unitOfMeasurements = () => api.get("/unit/");
 export const createProduct = (payload) => api.post("/product/create", payload);
+export const updateProduct = (id, payload) => api.put(`/product/update/${id}`, payload);
 
 const apis = {
   allProducts,
@@ -26,6 +27,7 @@ const apis = {
   ingredientForId,
   unitOfMeasurements,
   createProduct,
+  updateProduct,
 };
 
 export default apis;

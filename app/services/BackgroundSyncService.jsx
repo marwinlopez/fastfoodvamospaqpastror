@@ -95,6 +95,27 @@ export const BackgroundSyncService = {
     }
   },
 
+  // Actualizar un producto existente en la caché local
+  async updateProductInCache(id, updatedFields) {
+    try {
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.PRODUCTS);
+      const cachedList = cachedData ? JSON.parse(cachedData) : [];
+      const updatedList = cachedList.map((p) => {
+        if ((p.productId || p.id) === id) {
+          return { ...p, ...updatedFields };
+        }
+        return p;
+      });
+      await AsyncStorage.setItem(
+        CACHE_KEYS.PRODUCTS,
+        JSON.stringify(updatedList)
+      );
+      console.log("[SyncService] Producto actualizado en la caché local.");
+    } catch (error) {
+      console.log("[SyncService] Error al actualizar producto en caché:", error);
+    }
+  },
+
   // Encolar acción offline
   async enqueueSyncAction(type, payload) {
     try {
@@ -145,6 +166,8 @@ export const BackgroundSyncService = {
             await apis.newIngredient(action.payload);
           } else if (action.type === "newProduct") {
             await apis.createProduct(action.payload);
+          } else if (action.type === "editProduct") {
+            await apis.updateProduct(action.payload.id, action.payload.payload);
           }
           console.log(
             `[SyncService] Acción de cola sincronizada: ${action.type}`

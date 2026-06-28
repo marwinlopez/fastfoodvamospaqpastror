@@ -45,7 +45,12 @@ const MaterialsScreens = ({ navigation, route }) => {
     // 1. Cargar de la caché local para evitar bloquear la pantalla
     const cached = await BackgroundSyncService.getCachedProducts();
     if (cached && cached.length > 0) {
-      dispatch(actionCreators.success(cached));
+      const mappedCached = cached.map((p) => ({
+        ...p,
+        productId: p.productId || p.id || p.productoId || Date.now().toString(),
+        productoId: p.productId || p.id || p.productoId,
+      }));
+      dispatch(actionCreators.success(mappedCached));
     }
 
     // 2. Traer en segundo plano la última versión del servidor
@@ -55,7 +60,12 @@ const MaterialsScreens = ({ navigation, route }) => {
       const success = data?.success || Array.isArray(data);
 
       if (success && productsList && productsList.length > 0) {
-        dispatch(actionCreators.success(productsList));
+        const mappedList = productsList.map((p) => ({
+          ...p,
+          productId: p.productId || p.id || p.productoId || Date.now().toString(),
+          productoId: p.productId || p.id || p.productoId,
+        }));
+        dispatch(actionCreators.success(mappedList));
         BackgroundSyncService.preloadCatalogCache(); // Actualizar caché local
       } else if (!cached || cached.length === 0) {
         dispatch(actionCreators.success([]));
@@ -144,6 +154,11 @@ const MaterialsScreens = ({ navigation, route }) => {
                       product: item,
                       recipe: recipe,
                     });
+                  } else {
+                    navigation.push("NewProductScreen", {
+                      product: item,
+                      recipe: null,
+                    });
                   }
                 }}
                 style={styles.card}
@@ -184,10 +199,11 @@ const MaterialsScreens = ({ navigation, route }) => {
       <FAB
         visible={true}
         onPress={() =>
-          // navigation.push("NewProductScreen", {
-          //   recipe: recipe,
-          // })
-          console.log(recipe)
+          navigation.push("NewProductScreen", {
+            recipe: recipe,
+          })
+         
+          // console.log(recipe)
         }
         placement="right"
         title="Nuevo Producto"
