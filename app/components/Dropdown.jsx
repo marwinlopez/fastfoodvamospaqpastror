@@ -1,6 +1,5 @@
 import { Icon } from "@rneui/themed";
 import React, { useRef, useState } from "react";
-import { useEffect } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -10,30 +9,34 @@ import {
   View,
 } from "react-native";
 
+const DROPDOWN_WIDTH = 130;
+
 const Dropdown = ({ label, data, onSelect, color = "#6C757D" }) => {
   const DropdownButton = useRef();
   const [visible, setVisible] = useState(false);
-  const [selected, setSelected] = useState(undefined);
-  const [dropdownTop, setDropdownTop] = useState(50);
-
-  useEffect(() => {
-    DropdownButton.current.measure((_fx, _fy, _w, h, _px, py) => {
-      // console.log(_fx, _fy, _w, h, _px, py);
-      setDropdownTop(py);
-    });
-  }, [visible]);
+  const [dropdownTop, setDropdownTop] = useState(0);
+  const [dropdownLeft, setDropdownLeft] = useState(0);
 
   const toggleDropdown = () => {
-    visible ? setVisible(false) : openDropdown();
+    if (visible) {
+      setVisible(false);
+    } else {
+      openDropdown();
+    }
   };
 
   const openDropdown = () => {
-    setVisible(true);
+    if (DropdownButton.current) {
+      DropdownButton.current.measure((_fx, _fy, w, h, px, py) => {
+        setDropdownTop(py + h + 6);
+        setDropdownLeft(px - DROPDOWN_WIDTH + w);
+        setVisible(true);
+      });
+    }
   };
 
   const onItemPress = (item) => {
-    setSelected(item);
-    if (item.value > 0) {
+    if (item.value > 0 || item.method === "close") {
       onSelect({
         method: item.method,
         value: item.value,
@@ -42,28 +45,48 @@ const Dropdown = ({ label, data, onSelect, color = "#6C757D" }) => {
     setVisible(false);
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.item} onPress={() => onItemPress(item)}>
-      <Text>{item.label}</Text>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item, index }) => {
+    const isDelete = item.label.toLowerCase() === "eliminar";
+    const isCancel = item.label.toLowerCase() === "cancelar";
+
+    return (
+      <TouchableOpacity
+        style={[styles.item, index === data.length - 1 && styles.lastItem]}
+        onPress={() => onItemPress(item)}
+        activeOpacity={0.7}
+      >
+        <Text
+          style={[
+            styles.itemText,
+            isDelete && styles.deleteText,
+            isCancel && styles.cancelText,
+          ]}
+        >
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderDropdown = () => {
     return (
-      <Modal visible={visible} transparent animationType="none">
+      <Modal visible={visible} transparent animationType="fade">
         <TouchableOpacity
           style={styles.overlay}
-          onPress={() => {
-            setVisible(false);
-          }}
+          activeOpacity={1}
+          onPress={() => setVisible(false)}
         >
           <View
-            style={[styles.dropdown, { top: dropdownTop, left: 350 - 100 }]}
+            style={[
+              styles.dropdown,
+              { top: dropdownTop, left: dropdownLeft },
+            ]}
           >
             <FlatList
               data={data}
               renderItem={renderItem}
               keyExtractor={(item, index) => index.toString()}
+              scrollEnabled={false}
             />
           </View>
         </TouchableOpacity>
@@ -76,50 +99,68 @@ const Dropdown = ({ label, data, onSelect, color = "#6C757D" }) => {
       ref={DropdownButton}
       style={styles.button}
       onPress={toggleDropdown}
+      activeOpacity={0.7}
     >
-      <Text style={styles.buttonText}>
-        {/* {(!!selected && selected.label) || label} */}
-        <Icon type="feather" name="more-vertical" color={color} />
-      </Text>
+      <View style={styles.buttonText}>
+        <Icon type="feather" name="more-vertical" color={color} size={20} />
+      </View>
       {renderDropdown()}
-      {/* <Icon style={styles.icon} type="font-awesome" name="chevron-down" /> */}
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   button: {
-    flexDirection: "row",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F8F9FA", // Fondo muy claro para el botón en la tarjeta
+    justifyContent: "center",
     alignItems: "center",
-    // backgroundColor: "#efefef",
-    height: 50,
-    zIndex: 1,
   },
   buttonText: {
-    flex: 1,
-    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  icon: {
-    marginRight: 10,
+  overlay: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(26, 29, 32, 0.02)", // Fondo sutil casi invisible
   },
   dropdown: {
     position: "absolute",
-    backgroundColor: "#fff",
-    width: "100%",
-    shadowColor: "#000000",
-    shadowRadius: 4,
-    shadowOffset: { height: 4, width: 0 },
-    shadowOpacity: 0.5,
-  },
-  overlay: {
-    width: 100,
-    height: "100%",
+    backgroundColor: "#FFFFFF",
+    width: DROPDOWN_WIDTH,
+    borderRadius: 18,
+    paddingVertical: 6,
+    // Sombras Canvas sutiles y flotantes
+    shadowColor: "#1A1D20",
+    shadowOffset: { height: 10, width: 0 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 4,
   },
   item: {
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
+    borderBottomColor: "#F5F5F5", // Separador sutil
+  },
+  lastItem: {
+    borderBottomWidth: 0, // Sin separador para el último elemento
+  },
+  itemText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1A1D20",
+    textAlign: "center",
+  },
+  deleteText: {
+    color: "#DC2626", // Rojo moderno de alerta
+  },
+  cancelText: {
+    color: "#6C757D", // Gris neutro secundario
   },
 });
 
