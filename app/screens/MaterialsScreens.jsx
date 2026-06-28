@@ -43,23 +43,21 @@ const MaterialsScreens = ({ navigation, route }) => {
   };
   
   useEffect(() => {
-    console.log({ navigation, route })
-    BackHandler.addEventListener("hardwareBackPress", backActionHandler);
-    return () =>
-      BackHandler.removeEventListener("hardwareBackPress", backActionHandler);
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backActionHandler
+    );
+    return () => subscription.remove();
   }, []);
 
   const fetchMaterials = async () => {
-    // 1. Cargar instantáneamente de la caché local para evitar bloquear la pantalla
+    // 1. Cargar de la caché local para evitar bloquear la pantalla
     const cached = await BackgroundSyncService.getCachedProducts();
     if (cached && cached.length > 0) {
       dispatch(actionCreators.success(cached));
     }
-    // else {
-    //   dispatch(actionCreators.success(MOCK_PRODUCTS));
-    // }
 
-    // 2. Traer en segundo plano/asíncronamente la última versión del servidor
+    // 2. Traer en segundo plano la última versión del servidor
     try {
       const { data } = await apis.allProducts();
       const productsList = data?.products || (Array.isArray(data) ? data : null);
@@ -68,9 +66,18 @@ const MaterialsScreens = ({ navigation, route }) => {
       if (success && productsList && productsList.length > 0) {
         dispatch(actionCreators.success(productsList));
         BackgroundSyncService.preloadCatalogCache(); // Actualizar caché local
+      } else if (!cached || cached.length === 0) {
+        dispatch(actionCreators.success([]));
       }
     } catch (error) {
-      console.log("[MaterialsScreens] Sincronización asíncrona de fondo falló (usando caché):", error);
+      console.log(
+        "[MaterialsScreens] Sincronización asíncrona de fondo falló (usando caché):",
+        error
+      );
+      if (!cached || cached.length === 0) {
+        // Si no hay internet y no hay caché, caemos a MOCK_PRODUCTS para evitar colgar la app
+        dispatch(actionCreators.success(MOCK_PRODUCTS));
+      }
     }
   };
 
