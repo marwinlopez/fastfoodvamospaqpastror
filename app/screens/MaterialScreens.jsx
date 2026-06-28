@@ -2,11 +2,12 @@ import React, { useEffect, useState, useReducer } from "react";
 import {
   Alert,
   SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   ToastAndroid,
+  View,
 } from "react-native";
-import { Col, Grid, Row } from "react-native-easy-grid";
 import Header from "../components/Header";
 import { COLORS } from "../constants/themes";
 import apis from "../apis";
@@ -17,6 +18,8 @@ import MaterialReducer, {
 import NebulaTextInput from "../components/NebulaTextInput";
 import SelectDropdown from "react-native-select-dropdown";
 import { Button } from "@rneui/themed";
+import { Feather } from "@expo/vector-icons";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const MaterialScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(MaterialReducer, stateIngredients);
@@ -31,63 +34,54 @@ const MaterialScreens = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchUnitOfMeasurement();
+    const unsubscribe = navigation.addListener("focus", () => {
+      dispatch(actionCreators.loading());
+      setIsAdd(route.params.route === "addMaterial");
+      switch (route.params.route) {
+        case "addMaterial":
+          const { product, recipe } = route.params;
+          const { ingredients } = recipe;
+          const ingredient = ingredients.filter((i) => i.id);
+          dispatch(actionCreators.recipe(recipe));
+          if (ingredient.length > 0) {
+            Alert.alert(
+              "Producto Existe!",
+              `Ya el producto ${product.producto} esta agregado, ¿Desea modificar la cantidad?`,
+              [
+                {
+                  text: "Cancelar",
+                  onPress: () => null,
+                  style: "cancel",
+                },
+                { text: "Modificar", onPress: () => null },
+              ]
+            );
+          } else {
+            const ingredient = {
+              id: 0,
+              description: product.producto,
+              priceProduct: product.precioCompra,
+              quantityPack: product.cantidadPresentacion,
+              quantityUnitOf: product.cantidadEmpaque,
+              quantity: "",
+              unitOfMeasurementId: product.unidadMedidaId,
+              unitOfMeasurement: product.unidadMedida,
+            };
+            dispatch(actionCreators.success(ingredient));
+            dispatch(actionCreators.product(product));
+            setSelectedValue({
+              id: ingredient.unitOfMeasurementId,
+              name: ingredient.unitOfMeasurement,
+            });
+          }
+          break;
+        default:
+          console.log("no existe parametro");
+          break;
+      }
+    });
     return unsubscribe;
-  }, []);
-
-  const unsubscribe = navigation.addListener("focus", () => {
-    dispatch(actionCreators.loading());
-    setIsAdd(route.params.route === "addMaterial");
-    switch (route.params.route) {
-      case "editMaterial":
-        break;
-      case "newMaterial":
-        const { recipeId } = route.params;
-
-        break;
-      case "addMaterial":
-        const { product, recipe } = route.params;
-        const { ingredients } = recipe;
-        const ingredient = ingredients.filter((i) => i.id);
-        dispatch(actionCreators.recipe(recipe));
-        if (ingredient.length > 0) {
-          Alert.alert(
-            "Producto Existe!",
-            `Ya el producto ${product.producto} esta agregado, ¿Desea modificar la cantidad?`,
-            [
-              {
-                text: "Cancelar",
-                onPress: () => null,
-                style: "cancel",
-              },
-              { text: "Modificar", onPress: () => null },
-            ]
-          );
-        } else {
-          const ingredient = {
-            id: 0,
-            description: product.producto,
-            priceProduct: product.precioCompra,
-            quantityPack: product.cantidadPresentacion,
-            quantityUnitOf: product.cantidadEmpaque,
-            quantity: "",
-            unitOfMeasurementId: product.unidadMedidaId,
-            unitOfMeasurement: product.unidadMedida,
-          };
-          dispatch(actionCreators.success(ingredient));
-          dispatch(actionCreators.product(product));
-          setSelectedValue({
-            id: ingredient.unitOfMeasurementId,
-            name: ingredient.unitOfMeasurement,
-          });
-          console.log(product);
-        }
-        // console.log({ recipe });
-        break;
-      default:
-        console.log("no existe parametro");
-        break;
-    }
-  });
+  }, [navigation, route]);
 
   const { ingredient, recipe, unitOf, product } = state;
 
@@ -98,7 +92,6 @@ const MaterialScreens = ({ navigation, route }) => {
       unitOf.forEach(({ name }) => {
         unit.push(name);
       });
-      console.log(unit);
       dispatch(actionCreators.unitof(unit));
     });
   };
@@ -111,7 +104,6 @@ const MaterialScreens = ({ navigation, route }) => {
   };
 
   const onSelect = (item, index) => {
-    console.log(item, index);
     setDisabled(index == 0);
     setSelectedValue({ id: index, name: item });
   };
@@ -172,227 +164,256 @@ const MaterialScreens = ({ navigation, route }) => {
           : selectedValue && quantity === 0
           ? `Debe agregara la cantidad a usar`
           : `Error Inesperado`;
-      console.log(msgError);
       ToastAndroid.show(msgError, ToastAndroid.CENTER);
     }
   };
 
-  // if (recipe === null) {
-  //   return (
-  //     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-  //       <ActivityIndicator />
-  //     </View>
-  //   );
-  // }
-
   return (
-    <SafeAreaView style={{ height: "100%" }}>
-      <Grid>
-        <Row style={{ height: 77 }}>
-          <Col>
-            <Header
-              title={
-                ingredient.length > 0
-                  ? "MODIFICAR CANTIDAD"
-                  : "AÑADIR CANTIDAD "
-              }
-              buttonLeft={"arrow-left"}
-              actionLeft={redirectActionLeft}
-            />
-          </Col>
-        </Row>
-        <Row style={styles.rowContaninerStyles}>
-          <Col
-            style={{
-              height: 50,
-              width: 150,
-              justifyContent: "center",
-              // alignItems: "center",
-              paddingLeft: 15,
-            }}
-          >
-            <Text style={styles.textColStyles}>Receta :</Text>
-          </Col>
-          <Col>
-            <Text style={styles.textColStyles2}>{recipe?.name}</Text>
-          </Col>
-        </Row>
-        <Row
-          style={{
-            height: 50,
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: COLORS.default,
-            borderTopWidth: 1,
-          }}
-        >
-          <Text style={[styles.textColStyles2, { paddingLeft: 0 }]}>
-            Descripción Ingrediente
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <Header
+        title={
+          ingredient && ingredient.idIngredient > 0
+            ? "MODIFICAR CANTIDAD"
+            : "AÑADIR CANTIDAD"
+        }
+        buttonLeft={"arrow-left"}
+        actionLeft={redirectActionLeft}
+      />
+
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+      >
+        <View style={styles.contextCard}>
+          <Text style={styles.contextLabel}>Receta Activa</Text>
+          <Text style={styles.recipeNameText}>
+            {recipe?.name || "Sin Nombre"}
           </Text>
-        </Row>
-        <Row style={styles.rowContaninerStyles}>
-          <Col style={styles.colListStyles}>
-            <Text style={styles.textColStyles}>Descripción :</Text>
-          </Col>
-          <Col style={styles.bgDetalle}>
-            <Text style={styles.textColStyles2}>{ingredient?.description}</Text>
-          </Col>
-        </Row>
-        <Row style={styles.rowContaninerStyles}>
-          <Col style={styles.colListStyles}>
-            <Text style={styles.textColStyles}>Precio :</Text>
-          </Col>
-          <Col style={styles.bgDetalle}>
-            <Text style={styles.textColStyles2}>
-              {ingredient?.priceProduct} $
-            </Text>
-          </Col>
-        </Row>
-        <Row style={styles.rowContaninerStyles}>
-          <Col style={styles.colListStyles}>
-            <Text style={styles.textColStyles}>Cantidad Emp :</Text>
-          </Col>
-          <Col style={styles.bgDetalle}>
-            <Text style={styles.textColStyles2}>
-              {ingredient.quantityPack} {ingredient?.unitOfMeasurement}
-            </Text>
-          </Col>
-        </Row>
-        <Row style={styles.rowContaninerStyles}>
-          <Col style={styles.colListStyles}>
-            <Text style={styles.textColStyles}>Cantidad a usar :</Text>
-          </Col>
-          <Col style={styles.bgDetalle}>
+        </View>
+
+        <View style={styles.formCard}>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Descripción</Text>
+            <View style={styles.readOnlyField}>
+              <Feather
+                name="layers"
+                size={16}
+                color="#8E9AA6"
+                style={{ marginRight: 10 }}
+              />
+              <Text style={styles.readOnlyText}>
+                {ingredient?.description || "Cargando..."}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.rowGroup}>
+            <View style={[styles.formGroup, { flex: 1, marginRight: 12 }]}>
+              <Text style={styles.label}>Precio</Text>
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyText}>
+                  {ingredient?.priceProduct || "0.00"} $
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.formGroup, { flex: 1.2 }]}>
+              <Text style={styles.label}>Cantidad Empaque</Text>
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyText}>
+                  {ingredient?.quantityPack || "0"}{" "}
+                  {ingredient?.unitOfMeasurement || ""}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Cantidad a usar</Text>
             <NebulaTextInput
               inputMode="numeric"
-              defaultValue={`${ingredient?.quantity}`}
-              placeholder="ingrese la cantidad"
-              isDisabledBorder={true}
+              defaultValue={`${ingredient?.quantity || ""}`}
+              placeholder="Ej. 1.5"
               onChangeText={(text) => {
                 setQuantity(text);
                 setDisabled(selectedValue.id == 0 || text == "");
               }}
             />
-          </Col>
-        </Row>
-        <Row style={[styles.rowContaninerStyles]}>
-          <Col style={styles.colListStyles}>
-            <Text style={styles.textColStyles}>Unid. Med :</Text>
-          </Col>
-          <Col style={[styles.bgDetalle, { paddingHorizontal: 5 }]}>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Unid. Medida</Text>
             <SelectDropdown
               data={unitOf}
               defaultValueByIndex={selectedValue.id}
               defaultButtonText={selectedValue.name}
               defaultValue={selectedValue.name}
-              buttonStyle={{
-                borderColor: COLORS.default,
-                borderWidth: 1,
-                height: 35,
-                width: "100%",
-                borderRadius: 5,
-              }}
+              buttonStyle={styles.dropdownButton}
+              buttonTextStyle={styles.dropdownButtonText}
+              dropdownStyle={styles.dropdownMenu}
+              rowStyle={styles.dropdownRow}
+              rowTextStyle={styles.dropdownRowText}
+              renderDropdownIcon={(isOpened) => (
+                <Feather
+                  name={isOpened ? "chevron-up" : "chevron-down"}
+                  color="#8E9AA6"
+                  size={18}
+                />
+              )}
+              dropdownIconPosition="right"
               onSelect={(selectedItem, index) => {
                 onSelect(selectedItem, index);
               }}
-              buttonTextAfterSelection={(selectedItem, index) => {
-                // text represented after item is selected
-                // if data array is an array of objects then return selectedItem.property to render after item is selected
-                return selectedItem;
-              }}
-              rowTextForSelection={(item, index) => {
-                // text represented for each item in dropdown
-                // if data array is an array of objects then return item.property to represent item in dropdown
-                return item;
-              }}
+              buttonTextAfterSelection={(selectedItem) => selectedItem}
+              rowTextForSelection={(item) => item}
             />
-          </Col>
-        </Row>
-        <Row style={styles.rowContaninerSeparador} />
-        <Row
-          style={{
-            height: 60,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Col
-            style={{
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Button
-              containerStyle={{
-                paddingLeft: 0,
-                borderRadius: 5,
-                alignContent: "center",
-              }}
-              disabled={disabled}
-              buttonStyle={{
-                width: 150,
-                backgroundColor: COLORS.default,
-              }}
-              title={
-                ingredient?.ingredientId > 0
-                  ? "Modificar Cantidad"
-                  : "Añadir Cantidad"
-              }
-              onPress={addQuantityRecipe}
-            />
-          </Col>
-        </Row>
-      </Grid>
+          </View>
+
+          <Button
+            containerStyle={styles.buttonContainer}
+            disabled={disabled}
+            buttonStyle={styles.buttonStyle}
+            disabledStyle={styles.buttonDisabledStyle}
+            disabledTitleStyle={styles.buttonDisabledTitleStyle}
+            title={
+              ingredient?.idIngredient > 0
+                ? "Modificar Cantidad"
+                : "Añadir Cantidad"
+            }
+            titleStyle={styles.buttonTitle}
+            onPress={addQuantityRecipe}
+          />
+        </View>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  textColStyles: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "normal",
-    justifyContent: "center",
-    textAlign: "right",
-    textTransform: "capitalize",
-    paddingRight: 10,
+  container: {
+    flex: 1,
+    backgroundColor: "#FAFAFA",
   },
-  textColStyles2: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "bold",
-    justifyContent: "center",
-    textAlign: "left",
-    textTransform: "capitalize",
-    paddingLeft: 15,
+  scrollContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
-  colListStyles: {
-    height: 50,
-    width: 150,
-    borderRightWidth: 1,
-    borderColor: COLORS.default,
-    justifyContent: "center",
-    paddingLeft: 10,
+  contextCard: {
+    backgroundColor: "#5802F108",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#5802F115",
   },
-  bgDetalle: {
-    height: 50,
-    width: "60%",
-    justifyContent: "center",
-    backgroundColor: COLORS.lightGrey,
+  contextLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#5802F1",
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+    marginBottom: 4,
   },
-  rowContaninerStyles: {
-    height: 50,
-    justifyContent: "center",
+  recipeNameText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1D20",
+  },
+  formCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: "#1A1D20",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  formGroup: {
+    marginBottom: 18,
+  },
+  rowGroup: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#8E9AA6",
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+    marginBottom: 8,
+  },
+  readOnlyField: {
+    flexDirection: "row",
     alignItems: "center",
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: COLORS.default,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    height: 46,
+    paddingHorizontal: 16,
   },
-  rowContaninerSeparador: {
-    height: 5,
-    borderTopWidth: 1,
-    borderColor: COLORS.default,
+  readOnlyText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#4B5563",
+  },
+  dropdownButton: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E0E0E0",
+    borderWidth: 1,
+    borderRadius: 14,
+    height: 46,
+    width: "100%",
+    paddingHorizontal: 16,
+  },
+  dropdownButtonText: {
+    color: "#1A1D20",
+    fontSize: 14,
+    fontWeight: "500",
+    textAlign: "left",
+  },
+  dropdownMenu: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 0,
+    shadowColor: "#1A1D20",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  dropdownRow: {
+    borderBottomColor: "#F5F5F5",
+    height: 44,
+  },
+  dropdownRowText: {
+    color: "#1A1D20",
+    fontSize: 14,
+    textAlign: "left",
+    paddingLeft: 16,
+  },
+  buttonContainer: {
+    borderRadius: 14,
+    overflow: "hidden",
+    marginTop: 8,
+  },
+  buttonStyle: {
+    backgroundColor: "#5802F1",
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  buttonDisabledStyle: {
+    backgroundColor: "#E0E0E0",
+  },
+  buttonDisabledTitleStyle: {
+    color: "#8E9AA6",
+  },
+  buttonTitle: {
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
 
