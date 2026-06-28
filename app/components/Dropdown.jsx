@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 
-const Dropdown = ({ label, data, onSelect }) => {
+const Dropdown = ({ label, data, onSelect, color = "#6C757D" }) => {
   const DropdownButton = useRef();
   const [visible, setVisible] = useState(false);
   const [selected, setSelected] = useState(undefined);
@@ -79,7 +79,7 @@ const Dropdown = ({ label, data, onSelect }) => {
     >
       <Text style={styles.buttonText}>
         {/* {(!!selected && selected.label) || label} */}
-        <Icon type="feather" name="more-vertical" color="white" />
+        <Icon type="feather" name="more-vertical" color={color} />
       </Text>
       {renderDropdown()}
       {/* <Icon style={styles.icon} type="font-awesome" name="chevron-down" /> */}

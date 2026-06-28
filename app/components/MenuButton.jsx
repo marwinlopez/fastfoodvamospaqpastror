@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import Dropdown from "./Dropdown";
 import { useNavigation } from "@react-navigation/native";
 
-const MenuButton = ({ id, url }) => {
+const MenuButton = ({ id, url, color = "#6C757D" }) => {
   const [selected, setSelected] = useState(undefined);
   const navigation = useNavigation();
   const data = [
@@ -34,7 +34,7 @@ const MenuButton = ({ id, url }) => {
           Selected: label = {selected.label} and value = {selected.value}
         </Text>
       )} */}
-      <Dropdown label="Select Item" data={data} onSelect={setSelected} />
+      <Dropdown label="Select Item" data={data} onSelect={setSelected} color={color} />
       {/* <Text>This is the rest of the form.</Text> */}
     </View>
   );
