@@ -96,13 +96,15 @@ const RecipeScreens = ({ navigation, route }) => {
                 containerStyle={styles.buttonContainer}
                 disabled={isAddQuantity}
                 buttonStyle={styles.buttonStyle}
+                disabledStyle={styles.buttonDisabledStyle}
+                disabledTitleStyle={styles.buttonDisabledTitleStyle}
                 title="Editar Nombre"
                 titleStyle={styles.buttonTitle}
                 icon={{
                   name: "edit-2",
                   type: "feather",
                   size: 16,
-                  color: "white",
+                  color: isAddQuantity ? "#8E9AA6" : "white",
                 }}
                 iconContainerStyle={{ marginRight: 6 }}
                 onPress={addIngredients}
@@ -114,14 +116,16 @@ const RecipeScreens = ({ navigation, route }) => {
             containerStyle={styles.buttonContainer}
             disabled={isAddQuantity}
             buttonStyle={styles.buttonStyle}
+            disabledStyle={styles.buttonDisabledStyle}
+            disabledTitleStyle={styles.buttonDisabledTitleStyle}
             title="Añadir Cantidades"
             titleStyle={styles.buttonTitle}
             icon={{
               name: "plus",
               type: "feather",
               size: 16,
-              color: "white",
-            }}
+              color: isAddQuantity ? "#8E9AA6" : "white",
+                }}
             iconContainerStyle={{ marginRight: 6 }}
             onPress={addIngredients}
           />
@@ -224,6 +228,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#5802F1", // Morado de marca
     paddingVertical: 12,
     borderRadius: 14,
+  },
+  buttonDisabledStyle: {
+    backgroundColor: "#E0E0E0", // Gris suave Canvas
+  },
+  buttonDisabledTitleStyle: {
+    color: "#8E9AA6", // Texto lavado
   },
   buttonTitle: {
     fontSize: 14,

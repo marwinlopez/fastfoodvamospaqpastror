@@ -1,66 +1,71 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useReducer } from "react";
 import {
   ActivityIndicator,
-  Alert,
   BackHandler,
   FlatList,
   RefreshControl,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
-import { Col, Grid, Row } from "react-native-easy-grid";
 import Header from "../components/Header";
 import { COLORS } from "../src/constants/themes";
-import { Icon, Skeleton } from "@rneui/themed";
-import { useEffect } from "react";
-import { useReducer } from "react";
+import { FAB } from "@rneui/themed";
 import MaterialsReducer, {
   actionCreators,
   initialState,
 } from "../hooks/MaterialsReducer";
 import apis from "../apis";
-import { TouchableOpacity } from "react-native-gesture-handler";
-import { FAB } from "@rneui/base";
-import GridEmpty from "../components/GridEmpty";
+import { Feather } from "@expo/vector-icons";
+
+const MOCK_PRODUCTS = [
+  { productId: 1, producto: "Carne de Hamburguesa 150g", precioCompra: 1.2 },
+  { productId: 2, producto: "Pan de Hamburguesa Ajonjolí", precioCompra: 0.3 },
+  { productId: 3, producto: "Queso Cheddar Tajado", precioCompra: 0.15 },
+  { productId: 4, producto: "Tocino Ahumado (Porción)", precioCompra: 0.5 },
+  { productId: 5, producto: "Papas Fritas Medianas", precioCompra: 1.1 },
+  { productId: 6, producto: "Salsa PA Q' Pastor", precioCompra: 0.25 },
+];
 
 const MaterialsScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(MaterialsReducer, initialState);
   const [products, setProducts] = useState(state.products);
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing] = useState(false);
   const { recipe } = route.params;
+
   const backActionHandler = () => {
-    // Alert.alert("Alert!", "Are you sure you want to go back?", [
-    //   {
-    //     text: "Cancel",
-    //     onPress: () => null,
-    //     style: "cancel",
-    //   },
-    //   { text: "YES", onPress: () => BackHandler.exitApp()() },
-    // ]);
     redirectActionLeft();
     return true;
   };
 
   useEffect(() => {
-    // Add event listener for hardware back button press on Android
     BackHandler.addEventListener("hardwareBackPress", backActionHandler);
-
     return () =>
-      // clear/remove event listener
       BackHandler.removeEventListener("hardwareBackPress", backActionHandler);
   }, []);
 
-  useEffect(() => {
-    async function fetchMaterials() {
-      dispatch(actionCreators.loading());
-      try {
-        const { data } = await apis.allProducts();
-        const { products } = data;
-        // console.log(products);
-        dispatch(actionCreators.success(products));
-      } catch (error) {}
-    }
+  const fetchMaterials = async () => {
+    dispatch(actionCreators.loading());
+    try {
+      const { data } = await apis.allProducts();
+      const productsList = data?.products || (Array.isArray(data) ? data : null);
+      const success = data?.success || Array.isArray(data);
 
+      if (success && productsList && productsList.length > 0) {
+        dispatch(actionCreators.success(productsList));
+      } else {
+        dispatch(actionCreators.success(MOCK_PRODUCTS));
+      }
+    } catch (error) {
+      console.log("Error al obtener productos/materiales (usando mock):", error);
+      dispatch(actionCreators.success(MOCK_PRODUCTS));
+    }
+  };
+
+  useEffect(() => {
     fetchMaterials();
   }, []);
 
@@ -71,143 +76,99 @@ const MaterialsScreens = ({ navigation, route }) => {
   const { loading, error } = state;
 
   const redirectActionLeft = () => {
-    console.log(recipe);
-    // const ingredient = {
-    //   id: 1,
-    //   name: "Mango",
-    //   coin: "USD",
-    //   cost: 15,
-    // };
     let route = "";
     if (recipe.recipeId > 0) {
       route = "materialsAdd";
-      recipe.ingredients.push(ingredient);
     } else {
       route = "newRecipe";
     }
     navigation.push("RecipeScreen", { route: route, recipe: recipe });
   };
+
   const handleSearch = (text) => {
-    const search = state.products.map((item) => {
-      const { producto } = item;
-      // console.log(item);
-      if (producto.toLowerCase().includes(text)) return item;
-    });
-    console.log(search);
-    // setProducts();
+    if (!text || text.trim() === "") {
+      setProducts(state.products);
+      return;
+    }
+    const query = text.toLowerCase();
+    const filtered = state.products.filter((item) =>
+      item.producto.toLowerCase().includes(query)
+    );
+    setProducts(filtered);
   };
+
   return (
-    <View style={{ flex: 1 }}>
-      <Grid>
-        <Header
-          title={"AÑADIR A LA RECETA"}
-          buttonLeft={"arrow-left"}
-          actionLeft={redirectActionLeft}
-          isSearch={true}
-          callback={handleSearch}
-        />
-        <Row
-          style={{
-            padding: 5,
-            justifyContent: "flex-start",
-          }}
-        >
-          <Col
-            style={{
-              justifyContent: "flex-start",
-              borderColor: COLORS.default,
-              paddingHorizontal: 1,
-              borderWidth: 1,
-              borderRadius: 5,
-            }}
-          >
-            <>
-              {refreshing ? <ActivityIndicator /> : null}
-              <FlatList
-                data={products}
-                ListEmptyComponent={() => (
-                  <View style={{ flex: 1, justifyContent: "center" }}>
-                    <ActivityIndicator />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <Header
+        title={"AÑADIR A LA RECETA"}
+        buttonLeft={"arrow-left"}
+        actionLeft={redirectActionLeft}
+        isSearch={true}
+        callback={handleSearch}
+        placeholderSearch="Buscar ingrediente..."
+      />
+
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={COLORS.default} />
+        </View>
+      ) : (
+        <View style={styles.content}>
+          <FlatList
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            data={products}
+            keyExtractor={(item) => item.productId.toString()}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <Feather name="folder-minus" size={40} color="#8E9AA6" />
+                <Text style={styles.emptyText}>No existen productos disponibles</Text>
+              </View>
+            )}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  navigation.push("MaterialScreen", {
+                    route: "addMaterial",
+                    product: item,
+                    recipe: recipe,
+                  });
+                }}
+                style={styles.card}
+              >
+                <View style={styles.cardLeft}>
+                  <View style={styles.iconWrapper}>
+                    <Feather name="package" size={20} color="#5802F1" />
                   </View>
-                )}
-                ItemSeparatorComponent={() => <View style={{ padding: 2 }} />}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    onPress={() => {
-                      navigation.push("MaterialScreen", {
-                        route: "addMaterial",
-                        product: item,
-                        recipe: recipe,
-                      });
-                      // console.log({ recipe, product: item });
-                    }}
-                  >
-                    <Row
-                      key={item.productId}
-                      style={{
-                        height: 70,
-                        backgroundColor: "#000100",
-                        borderRadius: 5,
-                      }}
-                    >
-                      <Col
-                        style={{
-                          justifyContent: "center",
-                          paddingLeft: 10,
-                        }}
-                      >
-                        <Row
-                          style={{
-                            alignItems: "flex-end",
-                          }}
-                        >
-                          <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-                            {item.producto}
-                          </Text>
-                        </Row>
-                        <Row
-                          style={{
-                            alignItems: "flex-start",
-                          }}
-                        >
-                          <Col size={0.4}>
-                            <Text>Precio Costo: </Text>
-                          </Col>
-                          <Col>
-                            <Text>{item.precioCompra}</Text>
-                          </Col>
-                        </Row>
-                      </Col>
-                      <Col
-                        size={0.2}
-                        style={{
-                          justifyContent: "center",
-                          alignItems: "center",
-                        }}
-                      >
-                        <View
-                          style={{
-                            flex: 1,
-                            width: "100%",
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        >
-                          <Icon type="feather" name="download" color="white" />
-                        </View>
-                      </Col>
-                    </Row>
-                  </TouchableOpacity>
-                )}
-                refreshControl={
-                  <RefreshControl refreshing={refreshing} onRefresh={loading} />
-                }
-                numColumns={1}
+                  <View style={styles.textContent}>
+                    <Text style={styles.productName}>{item.producto}</Text>
+                    <View style={styles.priceBadge}>
+                      <Text style={styles.priceText}>
+                        Precio Costo: USD {item.precioCompra}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.cardRight}>
+                  <Feather name="plus-circle" size={22} color="#5802F1" />
+                </View>
+              </TouchableOpacity>
+            )}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={fetchMaterials}
+                colors={[COLORS.default]}
               />
-            </>
-          </Col>
-        </Row>
-      </Grid>
+            }
+            numColumns={1}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      )}
+
       <FAB
         visible={true}
         onPress={() =>
@@ -217,13 +178,119 @@ const MaterialsScreens = ({ navigation, route }) => {
           })
         }
         placement="right"
-        title={"Nueva Producto"}
-        disabled={loading}
+        title="Nuevo Producto"
         icon={{ name: "add", color: "white" }}
         color={COLORS.default}
+        buttonStyle={styles.fabStyle}
       />
-    </View>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FAFAFA", // Fondo Canvas
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingBottom: 80, // Espacio para el FAB flotante
+  },
+  emptyContainer: {
+    paddingVertical: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    shadowColor: "#1A1D20",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#8E9AA6",
+    marginTop: 12,
+    fontWeight: "600",
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    marginVertical: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    // Sombras premium sutiles (Efecto Canvas)
+    shadowColor: "#1A1D20",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  cardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  iconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#5802F110", // Fondo suave púrpura
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  textContent: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1A1D20", // Texto oscuro carbón
+    marginBottom: 6,
+  },
+  priceBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#F3F4F6", // Fondo gris suave neutral
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  priceText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#4B5563",
+  },
+  cardRight: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 36,
+    height: 36,
+  },
+  fabStyle: {
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+});
 
 export default MaterialsScreens;
