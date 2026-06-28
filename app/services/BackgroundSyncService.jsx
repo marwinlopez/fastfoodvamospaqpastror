@@ -72,6 +72,29 @@ export const BackgroundSyncService = {
     }
   },
 
+  // Añadir un nuevo producto a la caché local instantáneamente
+  async addProductToCache(product) {
+    try {
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.PRODUCTS);
+      const cachedList = cachedData ? JSON.parse(cachedData) : [];
+      const exists = cachedList.some(
+        (p) =>
+          p.producto &&
+          p.producto.toUpperCase() === product.producto.toUpperCase()
+      );
+      if (!exists) {
+        cachedList.push(product);
+        await AsyncStorage.setItem(
+          CACHE_KEYS.PRODUCTS,
+          JSON.stringify(cachedList)
+        );
+        console.log("[SyncService] Nuevo producto añadido a la caché local.");
+      }
+    } catch (error) {
+      console.log("[SyncService] Error al añadir producto a la caché:", error);
+    }
+  },
+
   // Encolar acción offline
   async enqueueSyncAction(type, payload) {
     try {

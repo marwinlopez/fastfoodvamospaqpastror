@@ -82,21 +82,23 @@ const NewProductScreen = ({ navigation, route }) => {
 
     setLoading(true);
 
+    const newProductItem = {
+      productId: Date.now().toString(),
+      producto: name.trim().toUpperCase(),
+      precioCompra: parseFloat(price),
+      cantidadPresentacion: parseFloat(qtyPresentacion),
+      cantidadEmpaque: parseFloat(qtyEmpaque),
+      unidadMedida: selectedUnit.name,
+      unidadMedidaId: selectedUnit.id,
+    };
+
     const payload = {
-      products: [
-        {
-          producto: name.trim().toUpperCase(),
-          precioCompra: parseFloat(price),
-          cantidadPresentacion: parseFloat(qtyPresentacion),
-          cantidadEmpaque: parseFloat(qtyEmpaque),
-          unidadMedida: selectedUnit.name,
-          unidadMedidaId: selectedUnit.id,
-        },
-      ],
+      products: [newProductItem],
     };
 
     try {
       await apis.createProduct(payload);
+      await BackgroundSyncService.addProductToCache(newProductItem);
       ToastAndroid.show("Producto registrado con éxito", ToastAndroid.SHORT);
       navigation.push("MaterialsScreen", { recipe });
     } catch (error) {
@@ -104,10 +106,8 @@ const NewProductScreen = ({ navigation, route }) => {
         "[NewProductScreen] Error de red. Encolando producto...",
         error
       );
-
-      // Encolar asíncronamente en segundo plano
+      await BackgroundSyncService.addProductToCache(newProductItem);
       await BackgroundSyncService.enqueueSyncAction("newProduct", payload);
-
       ToastAndroid.show(
         "Guardado local (se sincronizará en segundo plano)",
         ToastAndroid.LONG
@@ -216,10 +216,11 @@ const NewProductScreen = ({ navigation, route }) => {
           <Button
             containerStyle={styles.buttonContainer}
             disabled={!isFormValid || loading}
+            loading={loading}
             buttonStyle={styles.buttonStyle}
             disabledStyle={styles.buttonDisabledStyle}
             disabledTitleStyle={styles.buttonDisabledTitleStyle}
-            title={loading ? "Registrando..." : "Registrar Producto"}
+            title="Registrar Producto"
             titleStyle={styles.buttonTitle}
             onPress={handleSave}
             icon={
