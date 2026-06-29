@@ -300,6 +300,15 @@ const RecipeScreens = ({ navigation, route }) => {
               {recipe?.price !== undefined ? Number(recipe.price).toFixed(2) : "0.00"}
             </Text>
           </View>
+          <View style={styles.metricDivider} />
+          <View style={styles.metricColumn}>
+            <Text style={styles.metricLabel}>Rendimiento</Text>
+            <Text style={[styles.metricValue, { color: "#5802F1" }]}>
+              {recipe?.weight 
+                ? (recipe.weight >= 1000 ? `${(recipe.weight / 1000).toFixed(2)} kg` : `${recipe.weight.toFixed(0)} g`) 
+                : "0 g"}
+            </Text>
+          </View>
         </View>
       </View>
     </SafeAreaView>

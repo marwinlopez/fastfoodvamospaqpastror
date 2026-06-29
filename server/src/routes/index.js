@@ -2,6 +2,41 @@ const products = require("./product.routes");
 const divisas = require("./divisas.routes");
 const { db } = require("../firebase");
 
+const calculateTotalWeight = async (recipeId) => {
+  const ingSnapshot = await db.collection("ingredients")
+    .where("recipeId", "==", recipeId)
+    .get();
+  
+  let totalWeightGrams = 0;
+  
+  for (const d of ingSnapshot.docs) {
+    const data = d.data();
+    let qty = parseFloat(data.quantity || data.quantityUnitOfMeasurement || 0);
+    const unit = (data.unitOfMeasurement || "").toLowerCase();
+    
+    // Ignore units like "Unidades"
+    if (["gramos", "g", "gr", "mililitros", "ml"].includes(unit)) {
+      totalWeightGrams += qty;
+    } else if (["kilogramos", "kg", "kilos", "litros", "l"].includes(unit)) {
+      totalWeightGrams += (qty * 1000);
+    } else if (["libras", "lb", "lbs"].includes(unit)) {
+      totalWeightGrams += (qty * 453.592);
+    } else if (data.subRecipeId) {
+      // If it's a subrecipe, assume quantity is "unidades" of the recipe,
+      // so we need to add its yield * qty.
+      // But sub-recipes will now have their own `weight` property in grams!
+      const recipeDoc = await db.collection("recipes").doc(data.subRecipeId).get();
+      if (recipeDoc.exists) {
+        const rData = recipeDoc.data();
+        if (rData.weight) {
+           totalWeightGrams += (parseFloat(rData.weight) * qty);
+        }
+      }
+    }
+  }
+  return totalWeightGrams;
+};
+
 module.exports = (app) => {
   app.use(function (req, res, next) {
     res.header(
@@ -156,10 +191,13 @@ module.exports = (app) => {
         totalCost += parseFloat(d.data().cost || 0);
       });
 
+      const totalWeightGrams = await calculateTotalWeight(recipeId);
+
       await db.collection("recipes").doc(recipeId).update({
         cost: totalCost,
         profit: totalCost * 0.3,
         price: totalCost * 1.3,
+        weight: totalWeightGrams,
       });
 
       res.json({ success: true, ingredient: newIng });
@@ -234,10 +272,13 @@ module.exports = (app) => {
         totalCost += parseFloat(d.data().cost || 0);
       });
 
+      const totalWeightGrams = await calculateTotalWeight(recipeId);
+
       await db.collection("recipes").doc(recipeId).update({
         cost: totalCost,
         profit: totalCost * 0.3,
         price: totalCost * 1.3,
+        weight: totalWeightGrams,
       });
 
       res.json({ success: true, ingredient: { idIngredient: id, ...updatedIng } });
@@ -282,10 +323,13 @@ module.exports = (app) => {
         totalCost += parseFloat(d.data().cost || 0);
       });
 
+      const totalWeightGrams = await calculateTotalWeight(recipeId);
+
       await db.collection("recipes").doc(recipeId).update({
         cost: totalCost,
         profit: totalCost * 0.3,
         price: totalCost * 1.3,
+        weight: totalWeightGrams,
       });
 
       res.json({ success: true, message: "Ingrediente eliminado", newTotalCost: totalCost });
