@@ -70,15 +70,21 @@ const MaterialsScreens = ({ navigation, route }) => {
       const productsList = data?.data || data?.products || (Array.isArray(data) ? data : null);
       const success = data?.status || data?.success || Array.isArray(data);
 
-      if (success && productsList && productsList.length > 0) {
-        const mappedList = productsList.map((p) => ({
-          ...p,
-          productId: p.productId || p.id || p.productoId || Date.now().toString(),
-          productoId: p.productId || p.id || p.productoId,
-        }));
-        const deduped = deduplicateById(mappedList);
-        dispatch(actionCreators.success(deduped));
-        await AsyncStorage.setItem("products_cache", JSON.stringify(deduped));
+      if (success && productsList !== null && productsList !== undefined) {
+        if (productsList.length > 0) {
+          const mappedList = productsList.map((p) => ({
+            ...p,
+            productId: p.productId || p.id || p.productoId || Date.now().toString(),
+            productoId: p.productId || p.id || p.productoId,
+          }));
+          const deduped = deduplicateById(mappedList);
+          dispatch(actionCreators.success(deduped));
+          await AsyncStorage.setItem("products_cache", JSON.stringify(deduped));
+        } else {
+          // El servidor devolvió una lista vacía con éxito (datos borrados)
+          dispatch(actionCreators.success([]));
+          await AsyncStorage.removeItem("products_cache");
+        }
       } else if (!cached || cached.length === 0) {
         dispatch(actionCreators.success([]));
       }
