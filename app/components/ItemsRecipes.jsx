@@ -43,7 +43,7 @@ const ItemsRecipes = ({ recipes, edit, onRefresh }) => {
             </View>
           </View>
           <View style={styles.cardRight}>
-            <MenuButton id={item.recipeId} url="Recipe" color="#8E9AA6" />
+            <MenuButton recipe={item} url="Recipe" color="#8E9AA6" />
           </View>
         </View>
       )}

@@ -17,6 +17,9 @@ export const unitOfMeasurements = () => api.get("/unit/");
 export const createProduct = (payload) => api.post("/product/create", payload);
 export const updateProduct = (id, payload) => api.put(`/product/update/${id}`, payload);
 
+export const updateRecipe = (id, payload) => api.put(`/recipe/update/${id}`, payload);
+export const deleteRecipe = (id) => api.delete(`/recipe/delete/${id}`);
+
 const apis = {
   allProducts,
   productForId,
@@ -28,6 +31,8 @@ const apis = {
   unitOfMeasurements,
   createProduct,
   updateProduct,
+  updateRecipe,
+  deleteRecipe,
 };
 
 export default apis;

@@ -71,6 +71,27 @@ module.exports = (app) => {
     }
   });
 
+  app.put("/api/recipe/update/:id", async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const { name } = req.body;
+      await db.collection("recipes").doc(id).set({ name }, { merge: true });
+      res.json({ success: true, message: "Receta actualizada" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.delete("/api/recipe/delete/:id", async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      await db.collection("recipes").doc(id).delete();
+      res.json({ success: true, message: "Receta eliminada" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // --- Endpoints de Ingredientes ---
   app.post("/api/ingredient/create", async (req, res, next) => {
     try {

@@ -1,9 +1,10 @@
-import React, { useEffect, useReducer } from "react";
+import React, { useEffect, useReducer, useState } from "react";
 import {
   FlatList,
   StatusBar,
   StyleSheet,
   Text,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -21,6 +22,7 @@ import { Feather } from "@expo/vector-icons";
 
 const RecipeScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(RecipeReducer, initialState);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
@@ -28,9 +30,15 @@ const RecipeScreens = ({ navigation, route }) => {
       const { recipe } = route.params;
       switch (route.params.route) {
         case "editRecipe":
-          actionCreators.editRecipe(recipe).then((data) => {
-            dispatch(actionCreators.success(data));
-          });
+          if (recipe && typeof recipe === "object" && recipe.name) {
+            // El objeto receta ya viene completo desde la lista
+            dispatch(actionCreators.success(recipe));
+          } else if (recipe) {
+            // Fallback: solo tenemos el ID, buscar en API
+            actionCreators.editRecipe(recipe).then((data) => {
+              dispatch(actionCreators.success(data));
+            }).catch(() => dispatch(actionCreators.failure()));
+          }
           break;
         case "materialsAdd":
           const { recipeId, recipe: localRecipe } = route.params;
@@ -70,6 +78,24 @@ const RecipeScreens = ({ navigation, route }) => {
       });
   };
 
+  const saveRecipeName = async () => {
+    if (!recipe?.name?.trim()) {
+      ToastAndroid.show("El nombre no puede estar vacío", ToastAndroid.SHORT);
+      return;
+    }
+    setSaving(true);
+    try {
+      await apis.updateRecipe(recipe.recipeId || recipe.id, { name: recipe.name.trim() });
+      ToastAndroid.show("Nombre actualizado con éxito", ToastAndroid.SHORT);
+      navigation.push("RecipesScreen", { recipe });
+    } catch (err) {
+      console.log("[RecipeScreens] Error al guardar nombre:", err);
+      ToastAndroid.show("Error al guardar. Intenta de nuevo.", ToastAndroid.SHORT);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const addIngredients = () => {
     navigation.navigate("MaterialsScreen", { recipe: recipe });
   };
@@ -103,20 +129,21 @@ const RecipeScreens = ({ navigation, route }) => {
             <>
               <Button
                 containerStyle={styles.buttonContainer}
-                disabled={isAddQuantity}
+                disabled={isAddQuantity || saving}
+                loading={saving}
                 buttonStyle={styles.buttonStyle}
                 disabledStyle={styles.buttonDisabledStyle}
                 disabledTitleStyle={styles.buttonDisabledTitleStyle}
-                title="Editar Nombre"
+                title="Guardar Nombre"
                 titleStyle={styles.buttonTitle}
                 icon={{
-                  name: "edit-2",
+                  name: "save",
                   type: "feather",
                   size: 16,
-                  color: isAddQuantity ? "#8E9AA6" : "white",
+                  color: isAddQuantity || saving ? "#8E9AA6" : "white",
                 }}
                 iconContainerStyle={{ marginRight: 6 }}
-                onPress={addIngredients}
+                onPress={saveRecipeName}
               />
               <View style={{ width: 12 }} />
             </>

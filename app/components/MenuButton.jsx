@@ -3,12 +3,14 @@ import { StyleSheet, Text, View } from "react-native";
 import Dropdown from "./Dropdown";
 import { useNavigation } from "@react-navigation/native";
 
-const MenuButton = ({ id, url, color = "#6C757D" }) => {
+const MenuButton = ({ recipe, id, url, color = "#6C757D" }) => {
   const [selected, setSelected] = useState(undefined);
   const navigation = useNavigation();
+  // Soporte legacy: si recibe id en lugar de recipe, usa id como valor
+  const recipeValue = recipe ?? id;
   const data = [
-    { label: "Editar", method: "edit", value: id },
-    { label: "Eliminar", method: "delete", value: id },
+    { label: "Editar", method: "edit", value: recipeValue },
+    { label: "Eliminar", method: "delete", value: recipeValue },
     { label: "Cancelar", method: "close", value: 0 },
   ];
   useEffect(() => {
