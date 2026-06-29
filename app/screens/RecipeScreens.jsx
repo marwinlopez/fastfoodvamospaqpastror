@@ -106,6 +106,43 @@ const RecipeScreens = ({ navigation, route }) => {
     navigation.navigate("MaterialsScreen", { recipe: recipe });
   };
 
+  const handleEditIngredient = (item) => {
+    navigation.push("MaterialsScreen", {
+      route: "editMaterial",
+      recipe: recipe,
+      ingredient: item,
+    });
+  };
+
+  const handleDeleteIngredient = (item) => {
+    Alert.alert(
+      "Eliminar Ingrediente",
+      `¿Estás seguro de que deseas eliminar ${item.description} de la receta?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              dispatch(actionCreators.loading());
+              await apis.deleteIngredient(item.idIngredient);
+              ToastAndroid.show("Ingrediente eliminado", ToastAndroid.SHORT);
+              // Refrescar receta
+              const searchId = recipe.recipeId || recipe.id;
+              const { data } = await actionCreators.editRecipe(searchId);
+              dispatch(actionCreators.success(data));
+            } catch (error) {
+              console.log("Error al eliminar ingrediente:", error);
+              ToastAndroid.show("Error al eliminar ingrediente", ToastAndroid.SHORT);
+              dispatch(actionCreators.success(recipe)); // Restaurar estado
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
@@ -205,9 +242,14 @@ const RecipeScreens = ({ navigation, route }) => {
                     {item.coin || "USD"} {item.cost !== undefined ? Number(item.cost).toFixed(2) : "0.00"}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => handleDeleteIngredient(item)} style={{ padding: 8, marginLeft: 4 }}>
-                  <Feather name="trash-2" size={18} color="#FF3B30" />
-                </TouchableOpacity>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <TouchableOpacity onPress={() => handleEditIngredient(item)} style={{ padding: 8 }}>
+                    <Feather name="edit-2" size={18} color="#8E9AA6" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteIngredient(item)} style={{ padding: 8 }}>
+                    <Feather name="trash-2" size={18} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           )}
