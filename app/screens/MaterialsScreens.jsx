@@ -22,6 +22,8 @@ import apis from "../apis";
 import { Feather } from "@expo/vector-icons";
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getFirestore, collection, onSnapshot } from "firebase/firestore";
+import firebaseApp from "../database/firebase";
 
 const MaterialsScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(MaterialsReducer, initialState);
@@ -42,66 +44,64 @@ const MaterialsScreens = ({ navigation, route }) => {
     return () => subscription.remove();
   }, []);
 
-  const fetchMaterials = async () => {
-    // Helper: deduplica por productId, dando prioridad al último elemento visto
-    const deduplicateById = (list) => {
-      const seen = new Map();
-      list.forEach((p) => {
-        const id = p.productId || p.id || p.productoId;
-        if (id) seen.set(id.toString(), p);
-      });
-      return Array.from(seen.values());
-    };
+  // Helper: deduplica por productId, dando prioridad al último elemento visto
+  const deduplicateById = (list) => {
+    const seen = new Map();
+    list.forEach((p) => {
+      const id = p.productId || p.id || p.productoId;
+      if (id) seen.set(id.toString(), p);
+    });
+    return Array.from(seen.values());
+  };
 
-    // 1. Cargar de la caché local para evitar bloquear la pantalla
-    const cached = await BackgroundSyncService.getCachedProducts();
-    if (cached && cached.length > 0) {
-      const mappedCached = cached.map((p) => ({
-        ...p,
-        productId: p.productId || p.id || p.productoId || Date.now().toString(),
-        productoId: p.productId || p.id || p.productoId,
-      }));
-      dispatch(actionCreators.success(deduplicateById(mappedCached)));
-    }
-
-    // 2. Traer en segundo plano la última versión del servidor
-    try {
-      const { data } = await apis.allProducts();
-      const productsList = data?.data || data?.products || (Array.isArray(data) ? data : null);
-      const success = data?.status || data?.success || Array.isArray(data);
-
-      if (success && productsList && productsList.length > 0) {
-        const mappedList = productsList.map((p) => ({
+  useEffect(() => {
+    // 1. Carga inmediata desde caché local (para no mostrar pantalla vacía)
+    BackgroundSyncService.getCachedProducts().then((cached) => {
+      if (cached && cached.length > 0) {
+        const mappedCached = cached.map((p) => ({
           ...p,
           productId: p.productId || p.id || p.productoId || Date.now().toString(),
           productoId: p.productId || p.id || p.productoId,
         }));
-        // El servidor es la fuente de verdad: reemplaza la caché con datos deduplicados
-        const deduped = deduplicateById(mappedList);
-        dispatch(actionCreators.success(deduped));
-        // Reemplazar caché local con los datos limpios del servidor
-        await AsyncStorage.setItem(
-          "products_cache",
-          JSON.stringify(deduped)
-        );
-        BackgroundSyncService.preloadCatalogCache(); // Actualizar caché compartida
-      } else if (!cached || cached.length === 0) {
-        dispatch(actionCreators.success([]));
+        dispatch(actionCreators.success(deduplicateById(mappedCached)));
       }
-    } catch (error) {
-      console.log(
-        "[MaterialsScreens] Sincronización asíncrona de fondo falló (usando caché):",
-        error
-      );
-      if (!cached || cached.length === 0) {
-        // Si no hay internet y no hay caché, despachamos vacío para quitar el spinner
-        dispatch(actionCreators.success([]));
-      }
-    }
-  };
+    });
 
-  useEffect(() => {
-    fetchMaterials();
+    // 2. Suscripción en tiempo real a Firestore
+    const db = getFirestore(firebaseApp.app);
+    const productsCol = collection(db, "products");
+
+    const unsubscribe = onSnapshot(
+      productsCol,
+      (snapshot) => {
+        const productsList = snapshot.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+          productId: doc.data().productId || doc.id,
+          productoId: doc.data().productId || doc.id,
+        }));
+
+        const deduped = deduplicateById(productsList);
+        dispatch(actionCreators.success(deduped));
+
+        // Actualizar caché local con el estado actual
+        AsyncStorage.setItem("products_cache", JSON.stringify(deduped)).catch(
+          () => {}
+        );
+
+        console.log(
+          `[MaterialsScreens] ⚡ Tiempo real: ${deduped.length} productos actualizados`
+        );
+      },
+      (error) => {
+        console.log(
+          "[MaterialsScreens] Error en listener de Firestore, usando caché:",
+          error
+        );
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
