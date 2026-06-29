@@ -170,8 +170,24 @@ module.exports = (app) => {
         if (recipeDoc.exists) {
           const recipeData = recipeDoc.data();
           description = recipeData.name || "Sub-Receta";
-          const unitPrice = parseFloat(recipeData.cost || 0); // Assuming 1 unit is the full recipe cost
-          cost = unitPrice * parseFloat(quantityUnitOfMeasurement || 0);
+          
+          const qty = parseFloat(quantityUnitOfMeasurement || 0);
+          const unit = (unitOfMeasurement || "").toLowerCase();
+          
+          let qtyInGrams = 0;
+          if (["gramos", "g", "gr", "mililitros", "ml"].includes(unit)) {
+            qtyInGrams = qty;
+          } else if (["kilogramos", "kg", "kilos", "litros", "l"].includes(unit)) {
+            qtyInGrams = qty * 1000;
+          } else if (["libras", "lb", "lbs"].includes(unit)) {
+            qtyInGrams = qty * 453.592;
+          } else {
+            // Si es 'unidades', qty es la cantidad de recetas enteras
+            qtyInGrams = (parseFloat(recipeData.weight) || 1) * qty;
+          }
+          
+          const costPerGram = parseFloat(recipeData.cost || 0) / (parseFloat(recipeData.weight) || 1);
+          cost = costPerGram * qtyInGrams;
         } else {
           description = "Sub-Receta " + req.body.subRecipeId;
           cost = 1.0 * parseFloat(quantityUnitOfMeasurement || 0);
@@ -254,8 +270,24 @@ module.exports = (app) => {
         if (recipeDoc.exists) {
           const recipeData = recipeDoc.data();
           description = recipeData.name || "Sub-Receta";
-          const unitPrice = parseFloat(recipeData.cost || 0);
-          cost = unitPrice * parseFloat(quantityUnitOfMeasurement || 0);
+          
+          const qty = parseFloat(quantityUnitOfMeasurement || 0);
+          const unit = (unitOfMeasurement || "").toLowerCase();
+          
+          let qtyInGrams = 0;
+          if (["gramos", "g", "gr", "mililitros", "ml"].includes(unit)) {
+            qtyInGrams = qty;
+          } else if (["kilogramos", "kg", "kilos", "litros", "l"].includes(unit)) {
+            qtyInGrams = qty * 1000;
+          } else if (["libras", "lb", "lbs"].includes(unit)) {
+            qtyInGrams = qty * 453.592;
+          } else {
+            // Si es 'unidades', qty es la cantidad de recetas enteras
+            qtyInGrams = (parseFloat(recipeData.weight) || 1) * qty;
+          }
+          
+          const costPerGram = parseFloat(recipeData.cost || 0) / (parseFloat(recipeData.weight) || 1);
+          cost = costPerGram * qtyInGrams;
         } else {
           description = "Sub-Receta " + req.body.subRecipeId;
           cost = 1.0 * parseFloat(quantityUnitOfMeasurement || 0);
