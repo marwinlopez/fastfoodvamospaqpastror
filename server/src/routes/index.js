@@ -233,10 +233,14 @@ module.exports = (app) => {
 
       const totalWeightGrams = await calculateTotalWeight(recipeId);
 
+      const profitPercentage = 0; // Variable para calcular ganancia (ej. 30 para 30%)
+      const profit = profitPercentage > 0 ? (totalCost * (profitPercentage / 100)) : 0;
+      const price = totalCost + profit;
+
       await db.collection("recipes").doc(recipeId).update({
         cost: totalCost,
-        profit: totalCost * 0.3,
-        price: totalCost * 1.3,
+        profit: profit,
+        price: price,
         weight: totalWeightGrams,
       });
 
@@ -330,10 +334,14 @@ module.exports = (app) => {
 
       const totalWeightGrams = await calculateTotalWeight(recipeId);
 
+      const profitPercentage = 0; // Variable para calcular ganancia (ej. 30 para 30%)
+      const profit = profitPercentage > 0 ? (totalCost * (profitPercentage / 100)) : 0;
+      const price = totalCost + profit;
+
       await db.collection("recipes").doc(recipeId).update({
         cost: totalCost,
-        profit: totalCost * 0.3,
-        price: totalCost * 1.3,
+        profit: profit,
+        price: price,
         weight: totalWeightGrams,
       });
 
@@ -381,10 +389,14 @@ module.exports = (app) => {
 
       const totalWeightGrams = await calculateTotalWeight(recipeId);
 
+      const profitPercentage = 0; // Variable para calcular ganancia (ej. 30 para 30%)
+      const profit = profitPercentage > 0 ? (totalCost * (profitPercentage / 100)) : 0;
+      const price = totalCost + profit;
+
       await db.collection("recipes").doc(recipeId).update({
         cost: totalCost,
-        profit: totalCost * 0.3,
-        price: totalCost * 1.3,
+        profit: profit,
+        price: price,
         weight: totalWeightGrams,
       });
 
