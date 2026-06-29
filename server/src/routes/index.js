@@ -109,8 +109,11 @@ module.exports = (app) => {
       if (prodDoc.exists) {
         const prodData = prodDoc.data();
         description = prodData.producto || prodData.name || "";
-        const price = parseFloat(prodData.precioCompra || 0);
-        cost = price * parseFloat(quantityUnitOfMeasurement || 0);
+        const price = parseFloat(prodData.precioCompra || prodData.price || 0);
+        const packQty = parseFloat(prodData.cantidadPresentacion || 1);
+        const unitQty = parseFloat(prodData.cantidadEmpaque || 1);
+        const unitPrice = price / (packQty * unitQty);
+        cost = unitPrice * parseFloat(quantityUnitOfMeasurement || 0);
       } else {
         description = "Ingrediente " + productId;
         cost = 1.0 * parseFloat(quantityUnitOfMeasurement || 0);
@@ -124,6 +127,7 @@ module.exports = (app) => {
         description,
         unitOfMeasurement,
         quantityUnitOfMeasurement: parseFloat(quantityUnitOfMeasurement),
+        quantity: parseFloat(quantityUnitOfMeasurement),
         cost: cost,
         isActive: 1,
       };

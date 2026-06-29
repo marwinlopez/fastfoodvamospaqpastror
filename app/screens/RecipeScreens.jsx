@@ -189,14 +189,14 @@ const RecipeScreens = ({ navigation, route }) => {
                 <View style={styles.textContent}>
                   <Text style={styles.ingredientName}>{item.description}</Text>
                   <Text style={styles.ingredientQty}>
-                    Cantidad: {item.quantity} {item.unitOfMeasurement}
+                    Cantidad: {item.quantity ?? item.quantityUnitOfMeasurement} {item.unitOfMeasurement}
                   </Text>
                 </View>
               </View>
               <View style={styles.cardRight}>
                 <View style={styles.costBadge}>
                   <Text style={styles.costText}>
-                    {item.coin || "USD"} {item.cost}
+                    {item.coin || "USD"} {item.cost !== undefined ? Number(item.cost).toFixed(2) : "0.00"}
                   </Text>
                 </View>
               </View>
