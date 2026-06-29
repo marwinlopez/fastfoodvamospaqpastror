@@ -115,7 +115,7 @@ const MaterialScreens = ({ navigation, route }) => {
 
   useEffect(() => {
     if (ingredient) {
-      const itemQuantity = ingredient.quantity ?? ingredient.quantityUnitOfMeasurement;
+      const itemQuantity = ingredient.quantity || ingredient.quantityUnitOfMeasurement;
       if (itemQuantity !== undefined && itemQuantity !== null) {
         setQuantity(itemQuantity.toString());
       }
@@ -329,7 +329,7 @@ const MaterialScreens = ({ navigation, route }) => {
             <Text style={styles.label}>Cantidad a usar</Text>
             <NebulaTextInput
               inputMode="numeric"
-              defaultValue={`${ingredient?.quantity ?? ingredient?.quantityUnitOfMeasurement ?? ""}`}
+              defaultValue={`${ingredient?.quantity || ingredient?.quantityUnitOfMeasurement || ""}`}
               placeholder="Ej. 1.5"
               onChangeText={(text) => {
                 setQuantity(text);

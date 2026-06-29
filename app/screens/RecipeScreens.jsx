@@ -7,6 +7,7 @@ import {
   ToastAndroid,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
