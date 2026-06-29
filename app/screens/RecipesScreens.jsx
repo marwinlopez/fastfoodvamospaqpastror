@@ -119,6 +119,7 @@ const RecipesScreens = ({ navigation, route }) => {
           recipes={recipes}
           edit={editRecipe}
           deleteItem={deleteRecipe}
+          isSelectionMode={isSelectionMode}
           onRefresh={fetchRecipes}
         />
       </View>
