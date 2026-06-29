@@ -36,7 +36,7 @@ const Dropdown = ({ label, data, onSelect, color = "#6C757D" }) => {
   };
 
   const onItemPress = (item) => {
-    if (item.value > 0 || item.method === "close") {
+    if (item.method) {
       onSelect({
         method: item.method,
         value: item.value,
