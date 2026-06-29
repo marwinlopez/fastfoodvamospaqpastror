@@ -43,15 +43,26 @@ const MaterialScreens = ({ navigation, route }) => {
         case "editMaterial": {
           const { recipe, ingredient } = route.params;
           dispatch(actionCreators.recipe(recipe));
-          dispatch(actionCreators.success(ingredient));
-          // Fake a product structure for the screen
-          dispatch(actionCreators.product({ 
-            producto: ingredient.description, 
-            productoId: ingredient.productId 
-          }));
-          setSelectedValue({
-            id: ingredient.unitOfMeasurementId || 0,
-            name: ingredient.unitOfMeasurement,
+          
+          apis.productForId(ingredient.productId).then((res) => {
+            const prodData = res.data.product;
+            const fullIngredient = {
+              ...ingredient,
+              priceProduct: prodData.precioCompra,
+              quantityPack: prodData.cantidadPresentacion,
+            };
+            dispatch(actionCreators.success(fullIngredient));
+            dispatch(actionCreators.product({ 
+              producto: ingredient.description, 
+              productoId: ingredient.productId 
+            }));
+            setSelectedValue({
+              id: ingredient.unitOfMeasurementId || 0,
+              name: ingredient.unitOfMeasurement,
+            });
+          }).catch(err => {
+            console.log(err);
+            dispatch(actionCreators.success(ingredient));
           });
           break;
         }
@@ -104,8 +115,9 @@ const MaterialScreens = ({ navigation, route }) => {
 
   useEffect(() => {
     if (ingredient) {
-      if (ingredient.quantity !== undefined && ingredient.quantity !== null) {
-        setQuantity(ingredient.quantity.toString());
+      const itemQuantity = ingredient.quantity ?? ingredient.quantityUnitOfMeasurement;
+      if (itemQuantity !== undefined && itemQuantity !== null) {
+        setQuantity(itemQuantity.toString());
       }
       if (ingredient.unitOfMeasurement) {
         setSelectedValue({
@@ -317,7 +329,7 @@ const MaterialScreens = ({ navigation, route }) => {
             <Text style={styles.label}>Cantidad a usar</Text>
             <NebulaTextInput
               inputMode="numeric"
-              defaultValue={`${ingredient?.quantity || ""}`}
+              defaultValue={`${ingredient?.quantity ?? ingredient?.quantityUnitOfMeasurement ?? ""}`}
               placeholder="Ej. 1.5"
               onChangeText={(text) => {
                 setQuantity(text);
@@ -361,7 +373,7 @@ const MaterialScreens = ({ navigation, route }) => {
             disabledTitleStyle={styles.buttonDisabledTitleStyle}
             title={
               ingredient?.idIngredient > 0
-                ? "Modificar Cantidad"
+                ? "Actualizar"
                 : "Añadir Cantidad"
             }
             titleStyle={styles.buttonTitle}
