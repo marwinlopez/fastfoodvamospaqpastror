@@ -205,6 +205,9 @@ const RecipeScreens = ({ navigation, route }) => {
                     {item.coin || "USD"} {item.cost !== undefined ? Number(item.cost).toFixed(2) : "0.00"}
                   </Text>
                 </View>
+                <TouchableOpacity onPress={() => handleDeleteIngredient(item)} style={{ padding: 8, marginLeft: 4 }}>
+                  <Feather name="trash-2" size={18} color="#FF3B30" />
+                </TouchableOpacity>
               </View>
             </View>
           )}

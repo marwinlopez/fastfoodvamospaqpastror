@@ -169,6 +169,39 @@ module.exports = (app) => {
     }
   });
 
+  app.delete("/api/ingredient/delete/:id", async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const doc = await db.collection("ingredients").doc(id).get();
+      if (!doc.exists) {
+        return res.status(404).json({ message: "Ingrediente no encontrado" });
+      }
+      const data = doc.data();
+      const recipeId = data.recipeId;
+      
+      await db.collection("ingredients").doc(id).delete();
+
+      // Recalcular y actualizar costo total de la receta
+      const ingSnapshot = await db.collection("ingredients")
+        .where("recipeId", "==", recipeId)
+        .get();
+      let totalCost = 0;
+      ingSnapshot.docs.forEach((d) => {
+        totalCost += parseFloat(d.data().cost || 0);
+      });
+
+      await db.collection("recipes").doc(recipeId).update({
+        cost: totalCost,
+        profit: totalCost * 0.3,
+        price: totalCost * 1.3,
+      });
+
+      res.json({ success: true, message: "Ingrediente eliminado", newTotalCost: totalCost });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // --- Endpoints de Unidades de Medida ---
   app.get(["/api/unit", "/api/unit/"], async (req, res, next) => {
     try {

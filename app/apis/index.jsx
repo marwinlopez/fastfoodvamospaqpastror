@@ -19,6 +19,7 @@ export const updateProduct = (id, payload) => api.put(`/product/update/${id}`, p
 
 export const updateRecipe = (id, payload) => api.put(`/recipe/update/${id}`, payload);
 export const deleteRecipe = (id) => api.delete(`/recipe/delete/${id}`);
+export const deleteIngredient = (id) => api.delete(`/ingredient/delete/${id}`);
 
 const apis = {
   allProducts,
@@ -33,6 +34,7 @@ const apis = {
   updateProduct,
   updateRecipe,
   deleteRecipe,
+  deleteIngredient,
 };
 
 export default apis;
