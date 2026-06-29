@@ -4,6 +4,8 @@ import {
   View,
   StyleSheet,
   StatusBar,
+  Alert,
+  ToastAndroid,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
@@ -67,6 +69,32 @@ const RecipesScreens = ({ navigation, route }) => {
     }
   };
 
+  const deleteRecipe = (recipe) => {
+    Alert.alert(
+      "Eliminar Receta",
+      `¿Estás seguro de que deseas eliminar ${recipe.name}?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              dispatch(actionCreators.loading());
+              await apis.deleteRecipe(recipe.recipeId || recipe.id);
+              ToastAndroid.show("Receta eliminada", ToastAndroid.SHORT);
+              fetchRecipes();
+            } catch (error) {
+              console.log("Error al eliminar receta:", error);
+              ToastAndroid.show("Error al eliminar receta", ToastAndroid.SHORT);
+              fetchRecipes();
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -90,6 +118,7 @@ const RecipesScreens = ({ navigation, route }) => {
         <ItemsRecipes
           recipes={recipes}
           edit={editRecipe}
+          deleteItem={deleteRecipe}
           onRefresh={fetchRecipes}
         />
       </View>

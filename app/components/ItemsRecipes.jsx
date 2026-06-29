@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { memo } from "react";
+import React, { useState, memo } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -9,10 +8,9 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import MenuButton from "./MenuButton";
 import { COLORS } from "../src/constants/themes";
 
-const ItemsRecipes = ({ recipes, edit, onRefresh }) => {
+const ItemsRecipes = ({ recipes, edit, deleteItem, onRefresh }) => {
   const [refreshing] = useState(false);
 
   return (
@@ -43,8 +41,13 @@ const ItemsRecipes = ({ recipes, edit, onRefresh }) => {
               </View>
             </View>
           </View>
-          <View style={styles.cardRight}>
-            <MenuButton recipe={item} url="Recipe" color="#8E9AA6" />
+          <View style={[styles.cardRight, { flexDirection: "row", alignItems: "center" }]}>
+            <TouchableOpacity onPress={() => edit("RecipeScreen", "editRecipe", item)} style={{ padding: 8 }}>
+              <Feather name="edit-2" size={18} color="#8E9AA6" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => deleteItem(item)} style={{ padding: 8 }}>
+              <Feather name="trash-2" size={18} color="#FF3B30" />
+            </TouchableOpacity>
           </View>
         </View>
       )}
