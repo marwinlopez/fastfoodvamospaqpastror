@@ -40,7 +40,7 @@ const MaterialsScreens = ({ navigation, route }) => {
       backActionHandler
     );
     return () => subscription.remove();
-  }, []);
+  }, [navigation, route]);
 
   // Helper: deduplica por productId, dando prioridad al último elemento visto
   const deduplicateById = (list) => {

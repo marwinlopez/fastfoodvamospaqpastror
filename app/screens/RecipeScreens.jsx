@@ -65,7 +65,7 @@ const RecipeScreens = ({ navigation, route }) => {
       }
     });
     return unsubscribe;
-  }, []);
+  }, [navigation, route]);
 
   const { isAddQuantity, recipe } = state;
 
