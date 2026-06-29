@@ -34,6 +34,17 @@ const calculateTotalWeight = async (recipeId) => {
       }
     }
   }
+  const recipeDoc = await db.collection("recipes").doc(recipeId).get();
+  let merma = 0;
+  if (recipeDoc.exists) {
+    merma = parseFloat(recipeDoc.data().merma || 0);
+  }
+
+  // Apply merma reduction
+  if (merma > 0) {
+    totalWeightGrams = totalWeightGrams - (totalWeightGrams * (merma / 100));
+  }
+
   return totalWeightGrams;
 };
 
@@ -109,8 +120,21 @@ module.exports = (app) => {
   app.put("/api/recipe/update/:id", async (req, res, next) => {
     try {
       const { id } = req.params;
-      const { name } = req.body;
-      await db.collection("recipes").doc(id).set({ name }, { merge: true });
+      const { name, merma } = req.body;
+      const updateData = {};
+      if (name !== undefined) updateData.name = name;
+      if (merma !== undefined) updateData.merma = parseFloat(merma);
+
+      await db.collection("recipes").doc(id).set(updateData, { merge: true });
+
+      if (merma !== undefined) {
+        // If merma changed, we need to recalculate total weight
+        const totalWeightGrams = await calculateTotalWeight(id);
+        await db.collection("recipes").doc(id).update({
+          weight: totalWeightGrams,
+        });
+      }
+
       res.json({ success: true, message: "Receta actualizada" });
     } catch (err) {
       next(err);

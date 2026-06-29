@@ -85,18 +85,23 @@ const RecipeScreens = ({ navigation, route }) => {
       });
   };
 
-  const saveRecipeName = async () => {
+  const saveRecipeDetails = async () => {
     if (!recipe?.name?.trim()) {
       ToastAndroid.show("El nombre no puede estar vacío", ToastAndroid.SHORT);
       return;
     }
     setSaving(true);
     try {
-      await apis.updateRecipe(recipe.recipeId || recipe.id, { name: recipe.name.trim() });
-      ToastAndroid.show("Nombre actualizado con éxito", ToastAndroid.SHORT);
-      navigation.push("RecipesScreen", { recipe });
+      await apis.updateRecipe(recipe.recipeId || recipe.id, { 
+        name: recipe.name.trim(),
+        merma: parseFloat(recipe.merma || 0)
+      });
+      ToastAndroid.show("Detalles actualizados con éxito", ToastAndroid.SHORT);
+      // Recargar receta para obtener el rendimiento recalculado
+      getRecipeId(recipe.recipeId || recipe.id);
+      // No navegamos atrás para que el usuario pueda ver el nuevo rendimiento
     } catch (err) {
-      console.log("[RecipeScreens] Error al guardar nombre:", err);
+      console.log("[RecipeScreens] Error al guardar detalles:", err);
       ToastAndroid.show("Error al guardar. Intenta de nuevo.", ToastAndroid.SHORT);
     } finally {
       setSaving(false);
@@ -155,16 +160,30 @@ const RecipeScreens = ({ navigation, route }) => {
       />
 
       <View style={styles.content}>
-        {/* Formulario Nombre Receta */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Nombre de la Receta</Text>
-          <NebulaTextInput
-            defaultValue={recipe?.name}
-            onChangeText={(text) => {
-              dispatch(actionCreators.changeName(text.trim()));
-            }}
-            placeholder="Ej. Hamburguesa Doble"
-          />
+        {/* Formulario Nombre y Merma */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20 }}>
+          <View style={[styles.formGroup, { flex: 2, marginRight: 8, marginBottom: 0 }]}>
+            <Text style={styles.label}>Nombre de la Receta</Text>
+            <NebulaTextInput
+              defaultValue={recipe?.name}
+              onChangeText={(text) => {
+                dispatch(actionCreators.changeName(text.trim()));
+              }}
+              placeholder="Ej. Hamburguesa Doble"
+            />
+          </View>
+          <View style={[styles.formGroup, { flex: 1, marginBottom: 0 }]}>
+            <Text style={styles.label}>Merma (%)</Text>
+            <NebulaTextInput
+              defaultValue={recipe?.merma !== undefined ? recipe.merma.toString() : "0"}
+              inputMode="numeric"
+              onChangeText={(text) => {
+                // Asumiendo que podemos inyectar merma en la receta en memoria
+                if (recipe) recipe.merma = text.replace(/[^0-9.]/g, '');
+              }}
+              placeholder="Ej. 10"
+            />
+          </View>
         </View>
 
         {/* Acciones de Edición/Adición */}
@@ -178,7 +197,7 @@ const RecipeScreens = ({ navigation, route }) => {
                 buttonStyle={styles.buttonStyle}
                 disabledStyle={styles.buttonDisabledStyle}
                 disabledTitleStyle={styles.buttonDisabledTitleStyle}
-                title="Guardar Nombre"
+                title="Guardar Detalles"
                 titleStyle={styles.buttonTitle}
                 icon={{
                   name: "save",
@@ -187,7 +206,7 @@ const RecipeScreens = ({ navigation, route }) => {
                   color: isAddQuantity || saving ? "#8E9AA6" : "white",
                 }}
                 iconContainerStyle={{ marginRight: 6 }}
-                onPress={saveRecipeName}
+                onPress={saveRecipeDetails}
               />
               <View style={{ width: 12 }} />
             </>
