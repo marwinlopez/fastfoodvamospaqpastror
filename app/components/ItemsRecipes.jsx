@@ -37,7 +37,8 @@ const ItemsRecipes = ({ recipes, edit, onRefresh }) => {
               <Text style={styles.recipeName}>{item.name}</Text>
               <View style={styles.costBadge}>
                 <Text style={styles.costText}>
-                  Costo: {item.coin || "USD"} {item.cost}
+                  Costo: {item.coin || "USD"}{" "}
+                  {item.cost !== undefined ? Number(item.cost).toFixed(2) : "0.00"}
                 </Text>
               </View>
             </View>

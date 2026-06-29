@@ -209,18 +209,22 @@ const RecipeScreens = ({ navigation, route }) => {
         <View style={styles.financialCard}>
           <View style={styles.metricColumn}>
             <Text style={styles.metricLabel}>Costo ({recipe?.coin || "USD"})</Text>
-            <Text style={styles.metricValue}>{recipe?.cost || "0.00"}</Text>
+            <Text style={styles.metricValue}>
+              {recipe?.cost !== undefined ? Number(recipe.cost).toFixed(2) : "0.00"}
+            </Text>
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricColumn}>
             <Text style={styles.metricLabel}>Ganancia</Text>
-            <Text style={styles.metricValue}>{recipe?.profit || "0"}%</Text>
+            <Text style={styles.metricValue}>
+              {recipe?.profit !== undefined ? Number(recipe.profit).toFixed(2) : "0.00"}
+            </Text>
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricColumn}>
             <Text style={styles.metricLabel}>Precio ({recipe?.coin || "USD"})</Text>
             <Text style={[styles.metricValue, styles.priceValue]}>
-              {recipe?.price || "0.00"}
+              {recipe?.price !== undefined ? Number(recipe.price).toFixed(2) : "0.00"}
             </Text>
           </View>
         </View>
