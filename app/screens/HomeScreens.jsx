@@ -86,7 +86,13 @@ const HomeScreens = ({ navigation }) => {
           {actions.map((action) => (
             <TouchableOpacity
               key={action.id}
-              onPress={() => navigation.navigate(action.url, { recipe: null, item: null })}
+              onPress={() => {
+                if (action.url === "OrderScreen" || action.url === "MenuScreen") {
+                  alert("Esta sección estará disponible próximamente.");
+                } else {
+                  navigation.navigate(action.url, { recipe: null, item: null });
+                }
+              }}
               style={styles.card}
               activeOpacity={0.7}
             >
@@ -109,7 +115,7 @@ const HomeScreens = ({ navigation }) => {
         {/* Tarjeta de Servicio de Delivery Destacada */}
         <Text style={styles.sectionTitle}>Servicios Integrados</Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate("DeliveryScreen", { item: null })}
+          onPress={() => alert("El servicio de delivery estará disponible próximamente.")}
           style={styles.deliveryCard}
           activeOpacity={0.8}
         >
