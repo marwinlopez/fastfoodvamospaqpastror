@@ -36,8 +36,25 @@ const MaterialScreens = ({ navigation, route }) => {
     fetchUnitOfMeasurement();
     const unsubscribe = navigation.addListener("focus", () => {
       dispatch(actionCreators.loading());
-      setIsAdd(route.params.route === "addMaterial");
+      const isEditing = route.params.route === "editMaterial";
+      setIsAdd(route.params.route === "addMaterial" || isEditing);
+      
       switch (route.params.route) {
+        case "editMaterial": {
+          const { recipe, ingredient } = route.params;
+          dispatch(actionCreators.recipe(recipe));
+          dispatch(actionCreators.success(ingredient));
+          // Fake a product structure for the screen
+          dispatch(actionCreators.product({ 
+            producto: ingredient.description, 
+            productoId: ingredient.productId 
+          }));
+          setSelectedValue({
+            id: ingredient.unitOfMeasurementId || 0,
+            name: ingredient.unitOfMeasurement,
+          });
+          break;
+        }
         case "addMaterial":
           const { product, recipe } = route.params;
           const { ingredients } = recipe;
@@ -164,9 +181,9 @@ const MaterialScreens = ({ navigation, route }) => {
         }
 
         const ingredientPayload = {
-          id: isAdd ? 0 : ingredient.idIngredient,
+          id: route.params.route === "editMaterial" ? ingredient.idIngredient : 0,
           recipeId: id,
-          productId: product.productoId,
+          productId: product.productoId || product.productId,
           unitOfMeasurement: selectedValue.name,
           quantityUnitOfMeasurement: quantity,
           fixedCost: 0,
@@ -175,7 +192,12 @@ const MaterialScreens = ({ navigation, route }) => {
 
         // Intentar guardar en el servidor inmediatamente
         try {
-          const resp = await actionCreators.addIngredient(ingredientPayload);
+          let resp;
+          if (route.params.route === "editMaterial") {
+            resp = await apis.updateIngredient(ingredient.idIngredient, ingredientPayload);
+          } else {
+            resp = await actionCreators.addIngredient(ingredientPayload);
+          }
           if (resp) {
             navigation.push("RecipeScreen", {
               route: "materialsAdd",
