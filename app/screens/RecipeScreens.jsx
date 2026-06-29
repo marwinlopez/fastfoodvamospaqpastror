@@ -30,14 +30,20 @@ const RecipeScreens = ({ navigation, route }) => {
       const { recipe } = route.params;
       switch (route.params.route) {
         case "editRecipe":
+          // Carga inicial rápida con los datos básicos de la lista
           if (recipe && typeof recipe === "object" && recipe.name) {
-            // El objeto receta ya viene completo desde la lista
             dispatch(actionCreators.success(recipe));
-          } else if (recipe) {
-            // Fallback: solo tenemos el ID, buscar en API
-            actionCreators.editRecipe(recipe).then((data) => {
+          }
+          
+          // Siempre buscamos los detalles completos en la API (ingredientes)
+          const searchId = typeof recipe === "object" ? (recipe.recipeId || recipe.id) : recipe;
+          if (searchId) {
+            actionCreators.editRecipe(searchId).then((data) => {
               dispatch(actionCreators.success(data));
-            }).catch(() => dispatch(actionCreators.failure()));
+            }).catch(() => {
+              console.log("[RecipeScreens] Error fetching full recipe details");
+              dispatch(actionCreators.failure());
+            });
           }
           break;
         case "materialsAdd":
