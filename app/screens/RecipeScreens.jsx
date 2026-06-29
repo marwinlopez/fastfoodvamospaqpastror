@@ -107,7 +107,7 @@ const RecipeScreens = ({ navigation, route }) => {
   };
 
   const handleEditIngredient = (item) => {
-    navigation.push("MaterialsScreen", {
+    navigation.push("MaterialScreen", {
       route: "editMaterial",
       recipe: recipe,
       ingredient: item,
