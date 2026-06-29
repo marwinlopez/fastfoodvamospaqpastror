@@ -22,7 +22,7 @@ const MOCK_RECIPES = [
 
 const RecipesScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(RecipesReducer, initialState);
-  const { recipe } = route.params || {};
+  const { isSelectionMode, recipe: parentRecipe } = route.params || {};
   const { loading, error, recipes } = state;
 
   const fetchRecipes = async () => {
@@ -51,7 +51,20 @@ const RecipesScreens = ({ navigation, route }) => {
   }, [navigation]);
 
   const editRecipe = (action, route, recipe) => {
-    navigation.push(action, { route, recipe });
+    if (isSelectionMode && parentRecipe) {
+      // Estamos añadiendo esta receta (recipe) como sub-receta a la receta padre (parentRecipe)
+      navigation.push("MaterialScreen", {
+        route: "addMaterial",
+        recipe: parentRecipe,
+        ingredient: {
+          subRecipeId: recipe.recipeId || recipe.id,
+          description: recipe.name,
+          cost: recipe.cost,
+        },
+      });
+    } else {
+      navigation.push(action, { route, recipe });
+    }
   };
 
   if (loading) {

@@ -102,28 +102,42 @@ module.exports = (app) => {
         quantityUnitOfMeasurement,
       } = req.body;
 
-      // Consultar producto para obtener costo y descripción
-      const prodDoc = await db.collection("products").doc(productId).get();
+      // Consultar producto o sub-receta para obtener costo y descripción
       let cost = 0;
       let description = "";
-      if (prodDoc.exists) {
-        const prodData = prodDoc.data();
-        description = prodData.producto || prodData.name || "";
-        const price = parseFloat(prodData.precioCompra || prodData.price || 0);
-        const packQty = parseFloat(prodData.cantidadPresentacion || 1);
-        const unitQty = parseFloat(prodData.cantidadEmpaque || 1);
-        const unitPrice = price / (packQty * unitQty);
-        cost = unitPrice * parseFloat(quantityUnitOfMeasurement || 0);
+      
+      if (req.body.subRecipeId) {
+        const recipeDoc = await db.collection("recipes").doc(req.body.subRecipeId).get();
+        if (recipeDoc.exists) {
+          const recipeData = recipeDoc.data();
+          description = recipeData.name || "Sub-Receta";
+          const unitPrice = parseFloat(recipeData.cost || 0); // Assuming 1 unit is the full recipe cost
+          cost = unitPrice * parseFloat(quantityUnitOfMeasurement || 0);
+        } else {
+          description = "Sub-Receta " + req.body.subRecipeId;
+          cost = 1.0 * parseFloat(quantityUnitOfMeasurement || 0);
+        }
       } else {
-        description = "Ingrediente " + productId;
-        cost = 1.0 * parseFloat(quantityUnitOfMeasurement || 0);
+        const prodDoc = await db.collection("products").doc(productId).get();
+        if (prodDoc.exists) {
+          const prodData = prodDoc.data();
+          description = prodData.producto || prodData.name || "";
+          const price = parseFloat(prodData.precioCompra || prodData.price || 0);
+          const packQty = parseFloat(prodData.cantidadPresentacion || 1);
+          const unitQty = parseFloat(prodData.cantidadEmpaque || 1);
+          const unitPrice = price / (packQty * unitQty);
+          cost = unitPrice * parseFloat(quantityUnitOfMeasurement || 0);
+        } else {
+          description = "Ingrediente " + productId;
+          cost = 1.0 * parseFloat(quantityUnitOfMeasurement || 0);
+        }
       }
 
       const docRef = db.collection("ingredients").doc();
       const newIng = {
         idIngredient: docRef.id,
         recipeId,
-        productId,
+        ...(req.body.subRecipeId ? { subRecipeId: req.body.subRecipeId } : { productId }),
         description,
         unitOfMeasurement,
         quantityUnitOfMeasurement: parseFloat(quantityUnitOfMeasurement),
@@ -149,6 +163,84 @@ module.exports = (app) => {
       });
 
       res.json({ success: true, ingredient: newIng });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.put("/api/ingredient/update/:id", async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const {
+        recipeId,
+        productId,
+        unitOfMeasurement,
+        quantityUnitOfMeasurement,
+      } = req.body;
+
+      const doc = await db.collection("ingredients").doc(id).get();
+      if (!doc.exists) {
+        return res.status(404).json({ message: "Ingrediente no encontrado" });
+      }
+
+      // Consultar producto o sub-receta para obtener costo y descripción
+      let cost = 0;
+      let description = "";
+      
+      if (req.body.subRecipeId) {
+        const recipeDoc = await db.collection("recipes").doc(req.body.subRecipeId).get();
+        if (recipeDoc.exists) {
+          const recipeData = recipeDoc.data();
+          description = recipeData.name || "Sub-Receta";
+          const unitPrice = parseFloat(recipeData.cost || 0);
+          cost = unitPrice * parseFloat(quantityUnitOfMeasurement || 0);
+        } else {
+          description = "Sub-Receta " + req.body.subRecipeId;
+          cost = 1.0 * parseFloat(quantityUnitOfMeasurement || 0);
+        }
+      } else {
+        const prodDoc = await db.collection("products").doc(productId).get();
+        if (prodDoc.exists) {
+          const prodData = prodDoc.data();
+          description = prodData.producto || prodData.name || "";
+          const price = parseFloat(prodData.precioCompra || prodData.price || 0);
+          const packQty = parseFloat(prodData.cantidadPresentacion || 1);
+          const unitQty = parseFloat(prodData.cantidadEmpaque || 1);
+          const unitPrice = price / (packQty * unitQty);
+          cost = unitPrice * parseFloat(quantityUnitOfMeasurement || 0);
+        } else {
+          description = "Ingrediente " + productId;
+          cost = 1.0 * parseFloat(quantityUnitOfMeasurement || 0);
+        }
+      }
+
+      const updatedIng = {
+        recipeId,
+        ...(req.body.subRecipeId ? { subRecipeId: req.body.subRecipeId, productId: null } : { productId, subRecipeId: null }),
+        description,
+        unitOfMeasurement,
+        quantityUnitOfMeasurement: parseFloat(quantityUnitOfMeasurement),
+        quantity: parseFloat(quantityUnitOfMeasurement),
+        cost: cost,
+      };
+      await db.collection("ingredients").doc(id).update(updatedIng);
+
+      // Calcular y actualizar costo total de la receta
+      const ingSnapshot = await db.collection("ingredients")
+        .where("recipeId", "==", recipeId)
+        .get();
+      let totalCost = 0;
+      ingSnapshot.docs.forEach((d) => {
+        totalCost += parseFloat(d.data().cost || 0);
+      });
+
+      await db.collection("recipes").doc(recipeId).update({
+        cost: totalCost,
+        profit: totalCost * 0.3,
+        price: totalCost * 1.3,
+      });
+
+      res.json({ success: true, ingredient: { idIngredient: id, ...updatedIng } });
     } catch (err) {
       next(err);
     }

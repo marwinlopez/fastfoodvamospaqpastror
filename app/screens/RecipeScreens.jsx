@@ -192,22 +192,43 @@ const RecipeScreens = ({ navigation, route }) => {
               <View style={{ width: 12 }} />
             </>
           ) : null}
+        </View>
+
+        {/* Botón para Añadir Ingredientes o Sub-Recetas */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20 }}>
           <Button
-            containerStyle={styles.buttonContainer}
+            containerStyle={[styles.buttonContainer, { flex: 1, marginRight: 8 }]}
             disabled={isAddQuantity}
             buttonStyle={styles.buttonStyle}
             disabledStyle={styles.buttonDisabledStyle}
             disabledTitleStyle={styles.buttonDisabledTitleStyle}
-            title="Añadir Cantidades"
+            title="Añadir Producto"
             titleStyle={styles.buttonTitle}
             icon={{
-              name: "plus",
+              name: "package",
               type: "feather",
               size: 16,
               color: isAddQuantity ? "#8E9AA6" : "white",
                 }}
             iconContainerStyle={{ marginRight: 6 }}
             onPress={addIngredients}
+          />
+          <Button
+            containerStyle={[styles.buttonContainer, { flex: 1, marginLeft: 8 }]}
+            disabled={isAddQuantity}
+            buttonStyle={[styles.buttonStyle, { backgroundColor: "#059669" }]}
+            disabledStyle={styles.buttonDisabledStyle}
+            disabledTitleStyle={styles.buttonDisabledTitleStyle}
+            title="Añadir Sub-Receta"
+            titleStyle={styles.buttonTitle}
+            icon={{
+              name: "book",
+              type: "feather",
+              size: 16,
+              color: isAddQuantity ? "#8E9AA6" : "white",
+                }}
+            iconContainerStyle={{ marginRight: 6 }}
+            onPress={() => navigation.navigate("RecipesScreen", { isSelectionMode: true, recipe: recipe })}
           />
         </View>
 
@@ -322,10 +343,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   buttonDisabledStyle: {
-    backgroundColor: "#E0E0E0", // Gris suave Canvas
+    backgroundColor: "#8041ec", // Gris suave Canvas
   },
   buttonDisabledTitleStyle: {
-    color: "#8E9AA6", // Texto lavado
+    color: "#8041ec", // Texto lavado
   },
   buttonTitle: {
     fontSize: 14,

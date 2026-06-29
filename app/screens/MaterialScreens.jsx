@@ -44,65 +44,103 @@ const MaterialScreens = ({ navigation, route }) => {
           const { recipe, ingredient } = route.params;
           dispatch(actionCreators.recipe(recipe));
           
-          apis.productForId(ingredient.productId).then((res) => {
-            const prodData = res.data.product;
-            const fullIngredient = {
+          if (ingredient.subRecipeId) {
+            // It's a sub-recipe ingredient
+            dispatch(actionCreators.success({
               ...ingredient,
-              priceProduct: prodData.precioCompra,
-              quantityPack: prodData.cantidadPresentacion,
-            };
-            dispatch(actionCreators.success(fullIngredient));
-            dispatch(actionCreators.product({ 
-              producto: ingredient.description, 
-              productoId: ingredient.productId 
+              isSubRecipe: true,
             }));
             setSelectedValue({
               id: ingredient.unitOfMeasurementId || 0,
-              name: ingredient.unitOfMeasurement,
+              name: ingredient.unitOfMeasurement || "Unidades",
             });
-          }).catch(err => {
-            console.log(err);
-            dispatch(actionCreators.success(ingredient));
-          });
-          break;
-        }
-        case "addMaterial":
-          const { product, recipe } = route.params;
-          const { ingredients } = recipe;
-          const ingredient = ingredients.filter((i) => i.id);
-          dispatch(actionCreators.recipe(recipe));
-          if (ingredient.length > 0) {
-            Alert.alert(
-              "Producto Existe!",
-              `Ya el producto ${product.producto} esta agregado, ¿Desea modificar la cantidad?`,
-              [
-                {
-                  text: "Cancelar",
-                  onPress: () => null,
-                  style: "cancel",
-                },
-                { text: "Modificar", onPress: () => null },
-              ]
-            );
           } else {
-            const ingredient = {
-              id: 0,
-              description: product.producto,
-              priceProduct: product.precioCompra,
-              quantityPack: product.cantidadPresentacion,
-              quantityUnitOf: product.cantidadEmpaque,
-              quantity: "",
-              unitOfMeasurementId: product.unidadMedidaId,
-              unitOfMeasurement: product.unidadMedida,
-            };
-            dispatch(actionCreators.success(ingredient));
-            dispatch(actionCreators.product(product));
-            setSelectedValue({
-              id: ingredient.unitOfMeasurementId,
-              name: ingredient.unitOfMeasurement,
+            apis.productForId(ingredient.productId).then((res) => {
+              const prodData = res.data.product;
+              const fullIngredient = {
+                ...ingredient,
+                priceProduct: prodData.precioCompra,
+                quantityPack: prodData.cantidadPresentacion,
+              };
+              dispatch(actionCreators.success(fullIngredient));
+              dispatch(actionCreators.product({ 
+                producto: ingredient.description, 
+                productoId: ingredient.productId 
+              }));
+              setSelectedValue({
+                id: ingredient.unitOfMeasurementId || 0,
+                name: ingredient.unitOfMeasurement,
+              });
+            }).catch(err => {
+              console.log(err);
+              dispatch(actionCreators.success(ingredient));
             });
           }
           break;
+        }
+        case "addMaterial": {
+          const { product, recipe, ingredient: incomingIngredient } = route.params;
+          const { ingredients } = recipe;
+          dispatch(actionCreators.recipe(recipe));
+
+          if (incomingIngredient && incomingIngredient.subRecipeId) {
+            // Adding a sub-recipe
+            const exists = ingredients.some((i) => i.subRecipeId === incomingIngredient.subRecipeId);
+            if (exists) {
+              Alert.alert(
+                "Sub-Receta Existe!",
+                `La receta ${incomingIngredient.description} ya está agregada.`,
+                [{ text: "OK", onPress: () => navigation.goBack() }]
+              );
+            } else {
+              const newIng = {
+                id: 0,
+                subRecipeId: incomingIngredient.subRecipeId,
+                description: incomingIngredient.description,
+                quantity: "",
+                unitOfMeasurementId: 3, // Assuming 3 is "Unidades" based on standard DB
+                unitOfMeasurement: "Unidades",
+                isSubRecipe: true,
+              };
+              dispatch(actionCreators.success(newIng));
+              setSelectedValue({ id: 3, name: "Unidades" });
+            }
+          } else if (product) {
+            // Adding a regular product
+            const existingProd = ingredients.filter(
+              (i) => i.productId === (product.productoId || product.id || product.productId)
+            );
+            if (existingProd.length > 0) {
+              Alert.alert(
+                "Producto Existe!",
+                `Ya el producto ${product.producto} esta agregado, ¿Desea modificar la cantidad?`,
+                [
+                  { text: "Cancelar", onPress: () => null, style: "cancel" },
+                  { text: "Modificar", onPress: () => null },
+                ]
+              );
+            } else {
+              const newIng = {
+                id: 0,
+                productId: product.productoId || product.id || product.productId,
+                description: product.producto,
+                priceProduct: product.precioCompra,
+                quantityPack: product.cantidadPresentacion,
+                quantityUnitOf: product.cantidadEmpaque,
+                quantity: "",
+                unitOfMeasurementId: product.unidadMedidaId,
+                unitOfMeasurement: product.unidadMedida,
+              };
+              dispatch(actionCreators.success(newIng));
+              dispatch(actionCreators.product(product));
+              setSelectedValue({
+                id: newIng.unitOfMeasurementId,
+                name: newIng.unitOfMeasurement,
+              });
+            }
+          }
+          break;
+        }
         default:
           console.log("no existe parametro");
           break;
@@ -195,7 +233,9 @@ const MaterialScreens = ({ navigation, route }) => {
         const ingredientPayload = {
           id: route.params.route === "editMaterial" ? ingredient.idIngredient : 0,
           recipeId: id,
-          productId: product.productoId || product.productId,
+          ...(ingredient.isSubRecipe 
+              ? { subRecipeId: ingredient.subRecipeId } 
+              : { productId: product?.productoId || product?.productId || ingredient.productId }),
           unitOfMeasurement: selectedValue.name,
           quantityUnitOfMeasurement: quantity,
           fixedCost: 0,
@@ -225,10 +265,12 @@ const MaterialScreens = ({ navigation, route }) => {
           // Modificación local simulada
           recipe.ingredients.push({
             id: Date.now(),
-            description: product.producto,
-            priceProduct: product.precioCompra,
+            description: ingredient.isSubRecipe ? ingredient.description : product.producto,
+            priceProduct: ingredient.isSubRecipe ? ingredient.cost : product.precioCompra,
             quantity: quantity,
             unitOfMeasurement: selectedValue.name,
+            subRecipeId: ingredient.isSubRecipe ? ingredient.subRecipeId : null,
+            productId: ingredient.isSubRecipe ? null : (product.productoId || product.productId),
           });
 
           ToastAndroid.show(
@@ -309,20 +351,22 @@ const MaterialScreens = ({ navigation, route }) => {
               <Text style={styles.label}>Precio</Text>
               <View style={styles.readOnlyField}>
                 <Text style={styles.readOnlyText}>
-                  {ingredient?.priceProduct || "0.00"} $
+                  {ingredient?.priceProduct !== undefined ? Number(ingredient.priceProduct).toFixed(2) : "0.00"} $
                 </Text>
               </View>
             </View>
 
-            <View style={[styles.formGroup, { flex: 1.2 }]}>
-              <Text style={styles.label}>Cantidad Empaque</Text>
-              <View style={styles.readOnlyField}>
-                <Text style={styles.readOnlyText}>
-                  {ingredient?.quantityPack || "0"}{" "}
-                  {ingredient?.unitOfMeasurement || ""}
-                </Text>
+            {!ingredient?.isSubRecipe && (
+              <View style={[styles.formGroup, { flex: 1.2 }]}>
+                <Text style={styles.label}>Cantidad Empaque</Text>
+                <View style={styles.readOnlyField}>
+                  <Text style={styles.readOnlyText}>
+                    {ingredient?.quantityPack || "0"}{" "}
+                    {ingredient?.unitOfMeasurement || ""}
+                  </Text>
+                </View>
               </View>
-            </View>
+            )}
           </View>
 
           <View style={styles.formGroup}>
@@ -500,10 +544,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   buttonDisabledStyle: {
-    backgroundColor: "#E0E0E0",
+    backgroundColor: "#8041ec",
   },
   buttonDisabledTitleStyle: {
-    color: "#8E9AA6",
+    color: "#8041ec",
   },
   buttonTitle: {
     fontSize: 14,
