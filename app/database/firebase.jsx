@@ -6,10 +6,10 @@ import { getFirestore, collection, getDocs } from "firebase/firestore";
 import {
   getAuth,
   initializeAuth,
+  getReactNativePersistence,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { getReactNativePersistence } from "firebase/auth/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 // Your web app's Firebase configuration
 const firebaseConfig = {
