@@ -9,6 +9,13 @@ import RecipeScreens from "../screens/RecipeScreens";
 import MaterialsScreens from "../screens/MaterialsScreens";
 import MaterialScreens from "../screens/MaterialScreens";
 import NewProductScreen from "../screens/NewProductScreen";
+import MenuScreen from "../screens/MenuScreen";
+import ProductsSaleScreen from "../screens/ProductsSaleScreen";
+import SettingsScreen from "../screens/SettingsScreen";
+import CategorySettingsScreen from "../screens/CategorySettingsScreen";
+import UnitSettingsScreen from "../screens/UnitSettingsScreen";
+import StaffSettingsScreen from "../screens/StaffSettingsScreen";
+import RoleSettingsScreen from "../screens/RoleSettingsScreen";
 import useGlobal from "../hooks/useGlobal";
 import { ActivityIndicator, View } from "react-native";
 const Root = createStackNavigator();
@@ -38,6 +45,13 @@ const NavigatorScreen = (props) => {
       <Root.Screen name="MaterialsScreen" component={MaterialsScreens} />
       <Root.Screen name="MaterialScreen" component={MaterialScreens} />
       <Root.Screen name="NewProductScreen" component={NewProductScreen} />
+      <Root.Screen name="MenuScreen" component={MenuScreen} />
+      <Root.Screen name="ProductsSaleScreen" component={ProductsSaleScreen} />
+      <Root.Screen name="SettingsScreen" component={SettingsScreen} />
+      <Root.Screen name="CategorySettingsScreen" component={CategorySettingsScreen} />
+      <Root.Screen name="UnitSettingsScreen" component={UnitSettingsScreen} />
+      <Root.Screen name="StaffSettingsScreen" component={StaffSettingsScreen} />
+      <Root.Screen name="RoleSettingsScreen" component={RoleSettingsScreen} />
     </Root.Navigator>
   );
 };

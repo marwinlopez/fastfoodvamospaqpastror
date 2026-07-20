@@ -5,53 +5,102 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
+  ToastAndroid,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { COLORS } from "../src/constants/themes";
-import MenuButton from "../components/MenuButton";
+import { COLORS } from "../constants/themes";
 
 const HomeScreens = ({ navigation }) => {
-  const actions = [
+  const metrics = [
     {
       id: 1,
-      item: "Recetas",
-      url: "RecipesScreen",
-      icon: "book-open",
-      color: "#5802F1",
-      description: "Ver recetas y preparaciones",
+      title: "Ventas Hoy",
+      value: "$1,450.00",
+      icon: "dollar-sign",
+      color: COLORS.default,
     },
     {
       id: 2,
-      item: "Pedidos",
-      url: "OrderScreen",
+      title: "Pedidos Totales",
+      value: "124",
       icon: "shopping-bag",
       color: "#F4511E",
-      description: "Gestionar órdenes activas",
     },
     {
       id: 3,
-      item: "Menú",
-      url: "MenuScreen",
-      icon: "file-text",
+      title: "Tiempo Promedio",
+      value: "14 min",
+      icon: "clock",
       color: "#059669",
-      description: "Carta y productos de comida",
     },
-    // {
-    //   id: 4,
-    //   item: "Mesas",
-    //   url: "TableScreen",
-    //   icon: "grid",
-    //   color: "#2563EB",
-    //   description: "Ver estado de las mesas",
-    // },
+  ];
+
+  const quickActions = [
+    {
+      id: 1,
+      title: "Gestionar Menú",
+      icon: "book-open",
+      color: COLORS.default,
+      url: "ProductsSaleScreen",
+    },
+    {
+      id: 2,
+      title: "Ver Recetas",
+      icon: "list",
+      color: COLORS.default,
+      url: "RecipesScreen",
+    },
+    {
+      id: 3,
+      title: "Inventario",
+      icon: "package",
+      color: COLORS.default,
+      url: "MaterialsScreen",
+    },
     {
       id: 4,
-      item: "Productos",
-      url: "MaterialsScreen",
-      icon: "book",
-      color: "#2563EB",
-      description: "Ver listado de productos",
+      title: "Personal",
+      icon: "users",
+      color: COLORS.default,
+      url: "StaffSettingsScreen",
+    },
+  ];
+
+  const recentOrders = [
+    {
+      id: 1,
+      orderNum: "#2481",
+      name: "Combo Bacon",
+      time: "Hace 2 min",
+      table: "Mesa 4",
+      status: "Preparando",
+      statusColor: "#E28743",
+      statusBg: "#FFF3E0",
+      image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100",
+    },
+    {
+      id: 2,
+      orderNum: "#2480",
+      name: "Ensalada Mediterránea",
+      time: "Hace 8 min",
+      table: "Delivery",
+      status: "Listo",
+      statusColor: "#059669",
+      statusBg: "#E6F4EA",
+      image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=100",
+    },
+    {
+      id: 3,
+      orderNum: "#2479",
+      name: "Pasta Pomodoro",
+      time: "Hace 15 min",
+      table: "Mesa 12",
+      status: "Entregado",
+      statusColor: "#6C757D",
+      statusBg: "#F1F3F4",
+      image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=100",
     },
   ];
 
@@ -61,80 +110,155 @@ const HomeScreens = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Encabezado Elegante y Personalizado */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.brandSubtitle}>PA Q' PASTOR</Text>
-            <Text style={styles.brandTitle}>¡Hola, Chef! 👋</Text>
-            <Text style={styles.greetingText}>¿Qué gestionamos hoy?</Text>
+        {/* Header Superior */}
+        <View style={styles.topHeader}>
+          <View style={styles.brandContainer}>
+            <View style={[styles.logoCircle, { backgroundColor: COLORS.default }]}>
+              <Feather name="coffee" size={18} color="#FFFFFF" />
+            </View>
+            <Text style={[styles.brandTitle, { color: COLORS.default }]}>PA Q' PASTOR</Text>
           </View>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>PQ</Text>
+          <View style={styles.headerRight}>
+            <TouchableOpacity 
+              style={styles.notificationBtn}
+              onPress={() => ToastAndroid.show("No tienes notificaciones nuevas", ToastAndroid.SHORT)}
+            >
+              <Feather name="bell" size={20} color="#1A1D20" />
+              <View style={[styles.notificationDot, { backgroundColor: COLORS.default }]} />
+            </TouchableOpacity>
+            <Image
+              source={{ uri: "https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=100" }}
+              style={styles.profileAvatar}
+            />
           </View>
         </View>
 
-        {/* Fila del Botón de Menú de Configuración / Acceso Rápido */}
-        {/* <View style={styles.menuRow}>
-          <MenuButton />
-        </View> */}
+        {/* Bienvenida */}
+        <View style={styles.welcomeSection}>
+          <Text style={styles.welcomeTitle}>¡Hola, Chef!</Text>
+          <Text style={styles.welcomeSubtitle}>
+            La cocina está en marcha. Aquí está el resumen de hoy.
+          </Text>
+        </View>
 
-        {/* Título de Sección */}
-        <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
+        {/* Métricas Diarias */}
+        <View style={styles.metricsContainer}>
+          {metrics.map((metric) => (
+            <View key={metric.id} style={styles.metricCard}>
+              <View style={[styles.metricIconWrapper, { backgroundColor: `${metric.color}12` }]}>
+                <Feather name={metric.icon} size={22} color={metric.color} />
+              </View>
+              <View style={styles.metricTextWrapper}>
+                <Text style={styles.metricTitle}>{metric.title}</Text>
+                <Text style={styles.metricValue}>{metric.value}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
 
-        {/* Cuadrícula 2x2 */}
+        {/* Capacidad de Cocina */}
+        <View style={styles.capacityCard}>
+          <View style={styles.capacityHeader}>
+            <Text style={styles.capacityTitle}>CAPACIDAD DE COCINA</Text>
+            <View style={[styles.liveBadge, { backgroundColor: `${COLORS.default}15` }]}>
+              <Text style={[styles.liveText, { color: COLORS.default }]}>En Vivo</Text>
+            </View>
+          </View>
+          <View style={styles.demandRow}>
+            <View style={[styles.demandBadge, { backgroundColor: `${COLORS.orange}15` }]}>
+              <Text style={[styles.demandText, { color: COLORS.orange }]}>ALTA DEMANDA</Text>
+            </View>
+            <Text style={[styles.demandPercent, { color: COLORS.orange }]}>82%</Text>
+          </View>
+          
+          {/* Progress Bar */}
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: "82%", backgroundColor: COLORS.default }]} />
+          </View>
+          
+          <Text style={styles.capacitySubtext}>
+            6 fogones activos de 8 disponibles.
+          </Text>
+        </View>
+
+        {/* Cuadrícula de Acciones Rápidas */}
         <View style={styles.gridContainer}>
-          {actions.map((action) => (
+          {quickActions.map((action) => (
             <TouchableOpacity
               key={action.id}
+              style={styles.actionCard}
+              activeOpacity={0.7}
               onPress={() => {
-                if (action.url === "OrderScreen" || action.url === "MenuScreen") {
+                if (action.url === "StaffScreen") {
                   alert("Esta sección estará disponible próximamente.");
                 } else {
                   navigation.navigate(action.url, { recipe: null, item: null });
                 }
               }}
-              style={styles.card}
-              activeOpacity={0.7}
             >
-              <View
-                style={[
-                  styles.iconWrapper,
-                  { backgroundColor: `${action.color}15` },
-                ]}
-              >
-                <Feather name={action.icon} size={26} color={action.color} />
+              <View style={[styles.actionIconWrapper, { backgroundColor: `${COLORS.default}08` }]}>
+                <Feather name={action.icon} size={24} color={COLORS.default} />
               </View>
-              <View style={styles.cardTextContent}>
-                <Text style={styles.cardTitle}>{action.item}</Text>
-                <Text style={styles.cardDescription}>{action.description}</Text>
-              </View>
+              <Text style={styles.actionCardText}>{action.title}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Tarjeta de Servicio de Delivery Destacada */}
-        <Text style={styles.sectionTitle}>Servicios Integrados</Text>
-        <TouchableOpacity
-          onPress={() => alert("El servicio de delivery estará disponible próximamente.")}
-          style={styles.deliveryCard}
-          activeOpacity={0.8}
-        >
-          <View style={styles.deliveryLeft}>
-            <View style={styles.deliveryIconWrapper}>
-              <Feather name="truck" size={26} color="#5802F1" />
+        {/* Últimos Pedidos */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Últimos Pedidos</Text>
+          <TouchableOpacity onPress={() => ToastAndroid.show("Pedidos estará disponible próximamente", ToastAndroid.SHORT)}>
+            <Text style={[styles.viewAllText, { color: COLORS.default }]}>Ver todos</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.ordersList}>
+          {recentOrders.map((order) => (
+            <View key={order.id} style={styles.orderCard}>
+              <Image source={{ uri: order.image }} style={styles.orderImage} />
+              <View style={styles.orderTextContainer}>
+                <Text style={styles.orderTitle}>{order.orderNum} - {order.name}</Text>
+                <Text style={styles.orderSubtext}>{order.time} • {order.table}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: order.statusBg }]}>
+                <Text style={[styles.statusText, { color: order.statusColor }]}>{order.status}</Text>
+              </View>
             </View>
-            <View style={styles.deliveryTextContent}>
-              <Text style={styles.deliveryTitle}>Servicio de Delivery</Text>
-              <Text style={styles.deliveryDescription}>
-                Llevamos tus hamburguesas calientes a donde estés
-              </Text>
-            </View>
-          </View>
-          <View style={styles.deliveryRight}>
-            <Feather name="chevron-right" size={24} color="#8E9AA6" />
-          </View>
-        </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
+
+      {/* Footer Navigation */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.footerTab}>
+          <Feather name="home" size={20} color={COLORS.default} />
+          <Text style={[styles.footerTabText, { color: COLORS.default }]}>Inicio</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.footerTab}
+          onPress={() => ToastAndroid.show("Pedidos estará disponible pronto", ToastAndroid.SHORT)}
+        >
+          <Feather name="shopping-bag" size={20} color="#8E9AA6" />
+          <Text style={styles.footerTabText}>Órdenes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.footerTab}
+          onPress={() => navigation.navigate("ProductsSaleScreen")}
+        >
+          <Feather name="book-open" size={20} color="#8E9AA6" />
+          <Text style={styles.footerTabText}>Menú</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.footerTab}
+          onPress={() => navigation.navigate("SettingsScreen")}
+        >
+          <Feather name="settings" size={20} color="#8E9AA6" />
+          <Text style={styles.footerTabText}>Ajustes</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -142,157 +266,304 @@ const HomeScreens = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA", // Fondo Canvas ultra-limpio
+    backgroundColor: "#F8F9FA",
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingTop: 15,
+    paddingBottom: 90, // Margen para el footer
   },
-  header: {
+  topHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 20,
-    marginBottom: 16,
+    marginBottom: 25,
   },
-  brandSubtitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#5802F1",
-    textTransform: "uppercase",
-    letterSpacing: 2,
-    marginBottom: 4,
+  brandContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logoCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
   },
   brandTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  notificationBtn: {
+    padding: 8,
+    marginRight: 10,
+    position: "relative",
+  },
+  notificationDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    position: "absolute",
+    top: 6,
+    right: 8,
+  },
+  profileAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#EAEAEA",
+  },
+  welcomeSection: {
+    marginBottom: 20,
+  },
+  welcomeTitle: {
     fontSize: 24,
     fontWeight: "800",
     color: "#1A1D20",
-    letterSpacing: -0.5,
+    marginBottom: 4,
   },
-  greetingText: {
+  welcomeSubtitle: {
     fontSize: 14,
     color: "#6C757D",
-    marginTop: 2,
+    lineHeight: 18,
   },
-  avatarContainer: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "#5802F1",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#5802F1",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  avatarText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  menuRow: {
+  metricsContainer: {
     marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#8E9AA6",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
+  metricCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
-    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  metricIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  metricTextWrapper: {
+    flex: 1,
+  },
+  metricTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#8E9AA6",
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1A1D20",
+  },
+  capacityCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  capacityHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  capacityTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1A1D20",
+    letterSpacing: 1,
+  },
+  liveBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  liveText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  demandRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  demandBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  demandText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  demandPercent: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: "#EAEAEA",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  progressBarFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  capacitySubtext: {
+    fontSize: 12,
+    fontStyle: "italic",
+    color: "#6C757D",
   },
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 25,
   },
-  card: {
-    width: "47.5%",
+  actionCard: {
+    width: "48%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    justifyContent: "space-between",
-    minHeight: 150,
-    // Sombras premium súper sutiles
-    shadowColor: "#1A1D20",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
     elevation: 2,
   },
-  iconWrapper: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
+  actionIconWrapper: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  cardTextContent: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  cardTitle: {
-    fontSize: 16,
+  actionCardText: {
+    fontSize: 13,
     fontWeight: "700",
     color: "#1A1D20",
-    marginBottom: 4,
   },
-  cardDescription: {
-    fontSize: 11,
-    color: "#8E9AA6",
-    lineHeight: 14,
-  },
-  deliveryCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 20,
+  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#1A1D20",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
+    marginBottom: 15,
   },
-  deliveryLeft: {
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1A1D20",
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  ordersList: {
+    marginBottom: 10,
+  },
+  orderCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 12,
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.01,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  deliveryIconWrapper: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: "#5802F115",
+  orderImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: "#F0F0F0",
+  },
+  orderTextContainer: {
+    flex: 1,
+    marginLeft: 12,
     justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
   },
-  deliveryTextContent: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  deliveryTitle: {
-    fontSize: 16,
+  orderTitle: {
+    fontSize: 14,
     fontWeight: "700",
     color: "#1A1D20",
     marginBottom: 2,
   },
-  deliveryDescription: {
+  orderSubtext: {
     fontSize: 11,
     color: "#6C757D",
-    lineHeight: 15,
   },
-  deliveryRight: {
-    justifyContent: "center",
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 64,
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: "#EAEAEA",
+    justifyContent: "space-around",
     alignItems: "center",
+  },
+  footerTab: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+    width: "25%",
+  },
+  footerTabText: {
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 4,
+    color: "#8E9AA6",
   },
 });
 

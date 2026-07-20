@@ -11,8 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
-import NebulaTextInput from "../src/components/NebulaTextInput";
-import { COLORS } from "../src/constants/themes";
+import NebulaTextInput from "../components/NebulaTextInput";
+import { COLORS } from "../constants/themes";
 import RecipeReducer, {
   actionCreators,
   initialState,
@@ -24,6 +24,8 @@ import { Feather } from "@expo/vector-icons";
 const RecipeScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(RecipeReducer, initialState);
   const [saving, setSaving] = useState(false);
+  const [productsList, setProductsList] = useState([]);
+  const [recipesList, setRecipesList] = useState([]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
@@ -68,6 +70,87 @@ const RecipeScreens = ({ navigation, route }) => {
   }, [navigation, route]);
 
   const { isAddQuantity, recipe } = state;
+
+  // Cargar productos y recetas para cálculo de porciones disponibles a producir
+  useEffect(() => {
+    const loadYieldData = async () => {
+      try {
+        const cachedProds = await apis.allProducts().catch(() => null);
+        const listProds = cachedProds?.data?.data || cachedProds?.data?.products || (Array.isArray(cachedProds?.data) ? cachedProds.data : []);
+        if (listProds.length > 0) {
+          setProductsList(listProds);
+        }
+      } catch (err) {
+        console.log("Error loading products for yield calculation:", err);
+      }
+
+      try {
+        const recipeRes = await apis.recipeAll().catch(() => null);
+        const listRecipes = recipeRes?.data?.recipes || (Array.isArray(recipeRes?.data) ? recipeRes.data : []);
+        setRecipesList(listRecipes);
+      } catch (err) {
+        console.log("Error loading recipes for yield calculation:", err);
+      }
+    };
+    loadYieldData();
+  }, [recipe]);
+
+  const convertUnits = (value, fromUnit, toUnit) => {
+    const from = (fromUnit || "").toLowerCase().trim();
+    const to = (toUnit || "").toLowerCase().trim();
+    if (from === to) return value;
+    if (from === "kilogramos" && to === "gramos") return value * 1000;
+    if (from === "gramos" && to === "kilogramos") return value / 1000;
+    if (from === "litros" && to === "mililitros") return value * 1000;
+    if (from === "mililitros" && to === "litros") return value / 1000;
+    if (from === "libras" && to === "gramos") return value * 453.592;
+    if (from === "gramos" && to === "libras") return value / 453.592;
+    return value;
+  };
+
+  const calculateMaxProduction = (rec, prods, recs, visited = new Set()) => {
+    if (!rec || !rec.ingredients || rec.ingredients.length === 0) return 0;
+    
+    const recId = rec.recipeId || rec.id;
+    if (recId) {
+      if (visited.has(recId)) return 0;
+      visited.add(recId);
+    }
+
+    let minProduction = Infinity;
+
+    for (const ing of rec.ingredients) {
+      const isSubRecipe = ing.subRecipeId !== null && ing.subRecipeId !== undefined;
+      const ingQty = parseFloat(ing.quantity || ing.quantityUnitOfMeasurement || 0);
+      if (ingQty <= 0) continue;
+
+      if (isSubRecipe) {
+        const subRec = recs.find(r => (r.recipeId || r.id) === ing.subRecipeId);
+        if (subRec) {
+          const subRecMax = calculateMaxProduction(subRec, prods, recs, new Set(visited));
+          const ingredientMax = subRecMax / ingQty;
+          minProduction = Math.min(minProduction, ingredientMax);
+        } else {
+          minProduction = 0;
+        }
+      } else {
+        const pId = ing.productId || ing.id;
+        const prod = prods.find(p => (p.productId || p.id || p.productoId) === pId);
+        if (prod) {
+          const productStock = parseFloat(prod.cantidadPresentacion || 0) * parseFloat(prod.cantidadEmpaque || 0);
+          const availableStock = convertUnits(productStock, prod.unidadMedida, ing.unitOfMeasurement);
+          const ingredientMax = availableStock / ingQty;
+          minProduction = Math.min(minProduction, ingredientMax);
+        } else {
+          minProduction = 0;
+        }
+      }
+    }
+
+    return minProduction === Infinity ? 0 : Math.floor(minProduction);
+  };
+
+  const maxProduceable = calculateMaxProduction(recipe, productsList, recipesList);
 
   const redirectActionLeft = () => {
     navigation.push("RecipesScreen", { recipe: recipe });
@@ -250,6 +333,16 @@ const RecipeScreens = ({ navigation, route }) => {
             onPress={() => navigation.navigate("RecipesScreen", { isSelectionMode: true, recipe: recipe })}
           />
         </View>
+
+        {/* Cantidad disponible a producir */}
+        {recipe?.ingredients && recipe.ingredients.length > 0 ? (
+          <View style={[styles.yieldContainer, { backgroundColor: maxProduceable > 0 ? "#E8F5E9" : "#FFEBEE" }]}>
+            <Feather name="info" size={16} color={maxProduceable > 0 ? "#2E7D32" : "#C62828"} style={{ marginRight: 8 }} />
+            <Text style={[styles.yieldText, { color: maxProduceable > 0 ? "#2E7D32" : "#C62828" }]}>
+              Cantidad disponible a producir: <Text style={{ fontWeight: "800" }}>{maxProduceable} porciones</Text> (según inventario actual).
+            </Text>
+          </View>
+        ) : null}
 
         {/* Listado de Ingredientes */}
         <Text style={styles.sectionTitle}>Ingredientes</Text>
@@ -510,6 +603,20 @@ const styles = StyleSheet.create({
     width: 1,
     height: 30,
     backgroundColor: "#F3F4F6",
+  },
+  yieldContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
+  yieldText: {
+    fontSize: 12,
+    fontWeight: "600",
+    flex: 1,
   },
 });
 

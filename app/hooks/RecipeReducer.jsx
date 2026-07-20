@@ -64,10 +64,10 @@ export default (state, action) => {
       return {
         ...state,
         recipe: {
-          ...recipe,
-          name: payload.trim(),
+          ...(state.recipe || recipe),
+          name: payload,
         },
-        isAddQuantity: payload.length == 0,
+        isAddQuantity: payload.trim().length === 0,
       };
   }
 };

@@ -1,5 +1,5 @@
 import React from "react";
-import { COLORS } from "../src/constants/themes";
+import { COLORS } from "../constants/themes";
 import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
 import { Icon } from "@rneui/themed";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

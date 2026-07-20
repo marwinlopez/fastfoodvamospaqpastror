@@ -1,74 +1,33 @@
-const { db } = require("../firebase");
-const controller = require("../controllers/divisas.controller");
+const productService = require("../services/product.service");
+const asyncHandler = require("../utils/asyncHandler");
 
-exports.getAll = async (req, res) => {
-  const events = db.collection("products");
-  const querySnapshot = await events.get();
+exports.getAll = asyncHandler(async (req, res) => {
+  const data = await productService.getAllProducts();
+  res.json({ status: true, data });
+});
 
-  const tempDoc = querySnapshot.docs.map((doc) => {
-    return { id: doc.id, ...doc.data() };
-  });
-
-  const exchangeRef = db.collection("divisas").doc("DolarToday");
-  const exchange = await exchangeRef.get();
-  if (exchange.exists) {
-    const { quote } = exchange.data();
-    console.log(quote)
-    tempDoc.map((p) => {
-      p.price = parseFloat(quote) * p.price;
-      return p;
-    });
-  }
-
-  res.json({ status: true, data: tempDoc });
-};
-
-exports.update = (req, res) => {
+exports.update = asyncHandler(async (req, res) => {
   const { body, params } = req;
+  await productService.updateProduct(params.id, body);
+  res.status(202).json({ message: "Registro actualizado" });
+});
 
-  console.log(params);
-
-  db.collection("products")
-    .doc(params.id)
-    .update(body)
-    .then(() => {
-      res.status(202).json({ message: "Registro actualizado" });
-    })
-    .catch(() => {
-      res.status(400).json({ message: "Error no se actualizo el registro" });
-    });
-};
-
-exports.create = async (req, res) => {
+exports.create = asyncHandler(async (req, res) => {
   const { products } = req.body;
-  console.log(products);
+  await productService.createProducts(products);
+  res.json({ status: true });
+});
 
-  let colRef = db.collection("products");
-  var batch = db.batch();
-  products.forEach((product) => {
-    var id = db.collection(`products`).doc().id;
-    let ref = colRef.doc(`${id}`);
-    batch.set(ref, product);
-  });
-  await batch.commit();
-
-  res.json();
-};
-
-exports.search = async (req, res) => {
+exports.search = asyncHandler(async (req, res) => {
   const { query } = req.body;
-  const productsRef = db.collection("products");
+  const data = await productService.searchProducts(query);
+  res.json({ data });
+});
 
-  const querySnapshot = await productsRef.get();
-
-  const tempDoc = querySnapshot.docs.map((doc) => {
-    const data = doc.data();
-    if (
-      data.name.toUpperCase().includes(query.toUpperCase()) ||
-      data.coin.toUpperCase().includes(query.toUpperCase())
-    )
-      return { id: doc.id, ...data };
-  });
-
-  res.json({ data: tempDoc.filter((i) => i != null) });
-};
+exports.getById = asyncHandler(async (req, res) => {
+  const product = await productService.getProductById(req.params.id);
+  if (!product) {
+    return res.status(404).json({ message: "Producto no encontrado" });
+  }
+  res.json({ success: true, product });
+});

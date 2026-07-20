@@ -2,7 +2,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { COLORS } from "./src/constants/themes";
+import { COLORS } from "./constants/themes";
 import NavigatorScreen from "./navigation";
 import { GlobalProvider } from "./context/GlobalContext";
 

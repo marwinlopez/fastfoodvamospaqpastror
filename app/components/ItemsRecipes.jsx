@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { COLORS } from "../src/constants/themes";
+import { COLORS } from "../constants/themes";
 
 const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh }) => {
   const [refreshing] = useState(false);

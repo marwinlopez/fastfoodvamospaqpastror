@@ -9,18 +9,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
-import { COLORS } from "../src/constants/themes";
+import { COLORS } from "../constants/themes";
 import { FAB } from "@rneui/themed";
 import RecipesReducer, { actionCreators, initialState } from "../hooks/RecipesReducer";
 import apis from "../apis";
 import ItemsRecipes from "../components/ItemsRecipes";
-
-const MOCK_RECIPES = [
-  { recipeId: 1, name: "Hamburguesa Clásica PA Q'", cost: 4.5, coin: "USD" },
-  { recipeId: 2, name: "Papas Fritas Especiales", cost: 2.2, coin: "USD" },
-  { recipeId: 3, name: "Hamburguesa Doble Carne", cost: 6.0, coin: "USD" },
-  { recipeId: 4, name: "Combo Pastor Familiar", cost: 12.5, coin: "USD" },
-];
 
 const RecipesScreens = ({ navigation, route }) => {
   const [state, dispatch] = useReducer(RecipesReducer, initialState);
@@ -41,8 +34,8 @@ const RecipesScreens = ({ navigation, route }) => {
         }
       })
       .catch((error) => {
-        console.log("Error al obtener recetas de la API (usando fallback mock):", error);
-        dispatch(actionCreators.success(MOCK_RECIPES));
+        console.log("Error al obtener recetas de la API:", error);
+        dispatch(actionCreators.failure());
       });
   };
 

@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
-import { COLORS } from "../src/constants/themes";
+import { COLORS } from "../constants/themes";
 import { FAB } from "@rneui/themed";
 import MaterialsReducer, {
   actionCreators,
@@ -194,11 +194,27 @@ const MaterialsScreens = ({ navigation, route }) => {
                   </View>
                   <View style={styles.textContent}>
                     <Text style={styles.productName}>{item.producto}</Text>
-                    <View style={styles.priceBadge}>
-                      <Text style={styles.priceText}>
-                        Precio Costo: USD {item.precioCompra}
-                      </Text>
+                    <View style={styles.detailsRow}>
+                      <View style={styles.priceBadge}>
+                        <Text style={styles.priceText}>
+                          Precio Costo: USD {item.precioCompra}
+                        </Text>
+                      </View>
+                      <View style={[
+                        styles.stockBadge,
+                        { backgroundColor: (item.cantidadEmpaque || 0) > 0 ? "#E8F5E9" : "#FFEBEE" }
+                      ]}>
+                        <Text style={[
+                          styles.stockText,
+                          { color: (item.cantidadEmpaque || 0) > 0 ? "#2E7D32" : "#C62828" }
+                        ]}>
+                          Stock: {item.cantidadEmpaque || 0} ud.
+                        </Text>
+                      </View>
                     </View>
+                    <Text style={styles.presentationText}>
+                      Presentación: {item.cantidadPresentacion || 0} {item.unidadMedida || ""}
+                    </Text>
                   </View>
                 </View>
                 {recipe && (
@@ -319,9 +335,15 @@ const styles = StyleSheet.create({
     color: "#1A1D20", // Texto oscuro carbón
     marginBottom: 6,
   },
+  detailsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: 6,
+  },
   priceBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#E6F4EA", // Verde suave Canvas
+    backgroundColor: "#E6F4EA", // Verde suave Canvas original
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -329,7 +351,22 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#137333", // Verde destacado
+    color: "#137333", // Verde destacado original
+  },
+  stockBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginLeft: 8,
+  },
+  stockText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  presentationText: {
+    fontSize: 11,
+    color: "#8E9AA6",
+    fontWeight: "600",
   },
   cardRight: {
     justifyContent: "center",

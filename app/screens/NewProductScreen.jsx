@@ -383,7 +383,7 @@ const NewProductScreen = ({ navigation, route }) => {
                     name: "check-circle",
                     type: "feather",
                     size: 16,
-                    color: isFormValid ? "white" : "#8E9AA6",
+                    color: isFormValid ? "white" : "#F5F5F5",
                   }
             }
             iconContainerStyle={{ marginRight: 6 }}
@@ -502,10 +502,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   buttonDisabledStyle: {
-    backgroundColor: "#E0E0E0",
+    backgroundColor: "#8041ec",
   },
   buttonDisabledTitleStyle: {
-    color: "#8E9AA6",
+    color: "#F5F5F5",
   },
   buttonTitle: {
     fontSize: 14,
