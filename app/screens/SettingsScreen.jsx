@@ -9,8 +9,20 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS } from "../constants/themes";
+import useGlobal from "../hooks/useGlobal";
+import { actionCreators } from "../hooks/GlobalReducer";
+import AuthService from "../services/AuthService";
+
+const DANGER = "#FF3B30";
 
 const SettingsScreen = ({ navigation }) => {
+  const { dispatch } = useGlobal();
+
+  const handleLogout = async () => {
+    await AuthService.logout();
+    dispatch(actionCreators.logout());
+  };
+
   const options = [
     {
       id: 1,
@@ -88,6 +100,20 @@ const SettingsScreen = ({ navigation }) => {
               <Feather name="chevron-right" size={20} color="#8E9AA6" />
             </TouchableOpacity>
           ))}
+
+          <TouchableOpacity
+            style={[styles.optionCard, styles.logoutCard]}
+            activeOpacity={0.7}
+            onPress={handleLogout}
+          >
+            <View style={[styles.iconWrapper, { backgroundColor: `${DANGER}10` }]}>
+              <Feather name="log-out" size={22} color={DANGER} />
+            </View>
+            <View style={styles.textWrapper}>
+              <Text style={[styles.optionTitle, { color: DANGER }]}>Cerrar sesión</Text>
+              <Text style={styles.optionDescription}>Salir de tu cuenta en este dispositivo</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -197,6 +223,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.02,
     shadowRadius: 8,
     elevation: 2,
+  },
+  logoutCard: {
+    marginTop: 4,
   },
   iconWrapper: {
     width: 46,

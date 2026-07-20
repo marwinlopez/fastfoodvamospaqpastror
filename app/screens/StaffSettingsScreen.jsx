@@ -27,6 +27,7 @@ const StaffSettingsScreen = ({ navigation }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -65,6 +66,10 @@ const StaffSettingsScreen = ({ navigation }) => {
       ToastAndroid.show("Ingresa el nombre del colaborador", ToastAndroid.SHORT);
       return;
     }
+    if (!editingId && !password.trim()) {
+      ToastAndroid.show("Ingresa una contraseña para el nuevo colaborador", ToastAndroid.SHORT);
+      return;
+    }
 
     const payload = {
       name: name.trim(),
@@ -73,6 +78,9 @@ const StaffSettingsScreen = ({ navigation }) => {
       roleId: selectedRoleId || null,
       isActive: isActive,
     };
+    if (password.trim()) {
+      payload.password = password.trim();
+    }
 
     try {
       setLoading(true);
@@ -87,6 +95,7 @@ const StaffSettingsScreen = ({ navigation }) => {
       setName("");
       setEmail("");
       setPhone("");
+      setPassword("");
       setIsActive(true);
       setEditingId(null);
       await fetchData();
@@ -103,6 +112,7 @@ const StaffSettingsScreen = ({ navigation }) => {
     setName(item.name);
     setEmail(item.email || "");
     setPhone(item.phone || "");
+    setPassword("");
     setSelectedRoleId(item.roleId || "");
     setIsActive(item.isActive !== undefined ? item.isActive : true);
   };
@@ -198,6 +208,19 @@ const StaffSettingsScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Contraseña</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={editingId ? "Dejar en blanco para no cambiar" : "Mínimo 6 caracteres"}
+                placeholderTextColor="#A3A3A3"
+                autoCapitalize="none"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Teléfono</Text>
               <TextInput
                 style={styles.input}
@@ -269,6 +292,7 @@ const StaffSettingsScreen = ({ navigation }) => {
                   setName("");
                   setEmail("");
                   setPhone("");
+                  setPassword("");
                   setSelectedRoleId(roles[0]?.id || roles[0]?.roleId || "");
                   setIsActive(true);
                 }}

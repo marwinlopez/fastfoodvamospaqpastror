@@ -84,8 +84,15 @@ CREATE TABLE "staff" (
   "email" VARCHAR(255),
   "phone" VARCHAR(100),
   "roleId" VARCHAR(100) REFERENCES "roles"("id") ON DELETE SET NULL,
-  "isActive" BOOLEAN DEFAULT TRUE
+  "isActive" BOOLEAN DEFAULT TRUE,
+  "passwordHash" VARCHAR(255)
 );
+
+-- Índice único parcial (ignora email vacío/NULL) e insensible a mayúsculas,
+-- para poder usar el email como identificador de login.
+CREATE UNIQUE INDEX staff_email_unique_idx
+  ON "staff" (LOWER("email"))
+  WHERE "email" IS NOT NULL AND "email" <> '';
 
 -- 9. Tabla Menú (Platos listos para la venta)
 CREATE TABLE "menu" (

@@ -7,15 +7,23 @@ const menu = require("./menu.routes");
 const category = require("./category.routes");
 const role = require("./role.routes");
 const staff = require("./staff.routes");
+const auth = require("./auth.routes");
+const authMiddleware = require("../middlewares/auth.middleware");
 
 module.exports = (app) => {
   app.use(function (req, res, next) {
     res.header(
       "Access-Control-Allow-Headers",
-      "x-access-token, Origin, Content-Type, Accept"
+      "x-access-token, Origin, Content-Type, Accept, Authorization"
     );
     next();
   });
+
+  // Login público, no requiere token
+  app.use("/api/auth", auth);
+
+  // A partir de aquí, todas las rutas requieren sesión válida
+  app.use(authMiddleware);
 
   // Alias para peticiones de la app móvil
   app.use("/api/product", products);

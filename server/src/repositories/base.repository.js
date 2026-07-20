@@ -54,8 +54,10 @@ class BaseRepository {
     if (!record[this.primaryKey]) {
       record[this.primaryKey] = uuidv4();
     }
+    // customIdKey es solo un alias de conveniencia para la respuesta al cliente
+    // (lo agrega mapCustomId más abajo) — no es una columna real de la tabla.
     if (this.customIdKey) {
-      record[this.customIdKey] = record[this.primaryKey];
+      delete record[this.customIdKey];
     }
 
     // Eliminar undefined
@@ -88,8 +90,10 @@ class BaseRepository {
     if (this.customIdKey && record[this.customIdKey] && !record[this.primaryKey]) {
       record[this.primaryKey] = record[this.customIdKey];
     }
-    if (this.customIdKey && id) {
-      record[this.customIdKey] = id;
+    // customIdKey es solo un alias de conveniencia para la respuesta al cliente
+    // (lo agrega mapCustomId más abajo) — no es una columna real de la tabla.
+    if (this.customIdKey) {
+      delete record[this.customIdKey];
     }
 
     // Eliminar la clave primaria del SET para no sobreescribirla

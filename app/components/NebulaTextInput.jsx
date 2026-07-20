@@ -14,6 +14,8 @@ const NebulaTextInput = ({
   inputMode = "text",
   placeholderTextColor = "#8E9AA6",
   isDisabledBorder = false,
+  secureTextEntry = false,
+  autoCapitalize = "characters",
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -25,7 +27,8 @@ const NebulaTextInput = ({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={placeholderTextColor}
-        autoCapitalize="characters"
+        autoCapitalize={autoCapitalize}
+        secureTextEntry={secureTextEntry}
         style={[
           styles.input,
           {

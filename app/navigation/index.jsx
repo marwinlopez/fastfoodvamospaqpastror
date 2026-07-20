@@ -16,12 +16,13 @@ import CategorySettingsScreen from "../screens/CategorySettingsScreen";
 import UnitSettingsScreen from "../screens/UnitSettingsScreen";
 import StaffSettingsScreen from "../screens/StaffSettingsScreen";
 import RoleSettingsScreen from "../screens/RoleSettingsScreen";
+import LoginScreen from "../screens/LoginScreen";
 import useGlobal from "../hooks/useGlobal";
 import { ActivityIndicator, View } from "react-native";
 const Root = createStackNavigator();
 
 const NavigatorScreen = (props) => {
-  const { loading } = useGlobal();
+  const { loading, isAuthenticated } = useGlobal();
   const screenOptions = {
     headerShown: false,
     ...TransitionPresets.FadeFromBottomAndroid,
@@ -31,6 +32,17 @@ const NavigatorScreen = (props) => {
       <View style={{ flex: 1, justifyContent: "center" }}>
         <ActivityIndicator size={50} />
       </View>
+    );
+  }
+  if (!isAuthenticated) {
+    return (
+      <Root.Navigator
+        initialRouteName="LoginScreen"
+        screenOptions={screenOptions}
+        {...props}
+      >
+        <Root.Screen name="LoginScreen" component={LoginScreen} />
+      </Root.Navigator>
     );
   }
   return (

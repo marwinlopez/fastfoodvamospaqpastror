@@ -1,18 +1,38 @@
+const bcrypt = require("bcryptjs");
 const staffRepository = require("../repositories/staff.repository");
+const AppError = require("../errors/app-error");
+
+const stripPassword = (record) => {
+  if (!record) return record;
+  const { passwordHash, ...safe } = record;
+  return safe;
+};
 
 class StaffService {
   async getAllStaff() {
-    return await staffRepository.getAll();
+    const staff = await staffRepository.getAll();
+    return staff.map(stripPassword);
   }
 
   async createStaff(data) {
-    return await staffRepository.create({
+    if (!data.password) {
+      throw new AppError("Se requiere una contraseña para crear un miembro del personal", 400, "PASSWORD_REQUIRED");
+    }
+    if (!data.email) {
+      throw new AppError("Se requiere un correo para asignar una contraseña", 400, "EMAIL_REQUIRED_FOR_LOGIN");
+    }
+
+    const passwordHash = await bcrypt.hash(data.password, 10);
+
+    const created = await staffRepository.create({
       name: data.name,
       email: data.email || "",
       phone: data.phone || "",
       roleId: data.roleId || null,
       isActive: data.isActive !== undefined ? data.isActive : true,
+      passwordHash,
     });
+    return stripPassword(created);
   }
 
   async updateStaff(id, data) {
@@ -23,7 +43,17 @@ class StaffService {
     if (data.roleId !== undefined) updateData.roleId = data.roleId;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
-    return await staffRepository.update(id, updateData);
+    if (data.password) {
+      const existing = await staffRepository.getById(id);
+      const finalEmail = data.email !== undefined ? data.email : existing?.email;
+      if (!finalEmail) {
+        throw new AppError("Se requiere un correo para asignar una contraseña", 400, "EMAIL_REQUIRED_FOR_LOGIN");
+      }
+      updateData.passwordHash = await bcrypt.hash(data.password, 10);
+    }
+
+    const updated = await staffRepository.update(id, updateData);
+    return stripPassword(updated);
   }
 
   async deleteStaff(id) {

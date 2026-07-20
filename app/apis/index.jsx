@@ -13,6 +13,40 @@ const api = axios.create({
   timeout: 5000,
 });
 
+// Token en memoria: los interceptores necesitan leerlo de forma síncrona en
+// cada request, y expo-secure-store es asíncrono. AuthService lo mantiene
+// sincronizado con el almacenamiento seguro (ver app/services/AuthService.jsx).
+let currentToken = null;
+let unauthorizedHandler = null;
+
+export const setAuthToken = (token) => {
+  currentToken = token;
+};
+
+export const setUnauthorizedHandler = (fn) => {
+  unauthorizedHandler = fn;
+};
+
+api.interceptors.request.use((config) => {
+  if (currentToken) {
+    config.headers.Authorization = `Bearer ${currentToken}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && unauthorizedHandler) {
+      unauthorizedHandler();
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const login = (payload) => api.post("/auth/login", payload);
+export const getMe = () => api.get("/auth/me");
+
 export const allProducts = () => api.get("/product/get-all");
 export const productForId = (id) => api.get(`/product/${id}`);
 export const recipeForId = (id) => api.get(`/recipe/${id}`);
@@ -59,6 +93,10 @@ export const updateRole = (id, payload) => api.put(`/role/update/${id}`, payload
 export const deleteRole = (id) => api.delete(`/role/delete/${id}`);
 
 const apis = {
+  setAuthToken,
+  setUnauthorizedHandler,
+  login,
+  getMe,
   allProducts,
   productForId,
   recipeForId,
