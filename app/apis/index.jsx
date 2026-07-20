@@ -1,7 +1,15 @@
 import axios from "axios";
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!API_URL) {
+  console.warn(
+    "[apis] EXPO_PUBLIC_API_URL no está definida. Copia app/.env.example a app/.env y ajusta la IP de tu servidor."
+  );
+}
+
 const api = axios.create({
-  baseURL: "http://192.168.1.150:3000/api",
+  baseURL: API_URL,
   timeout: 5000,
 });
 
