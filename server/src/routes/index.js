@@ -7,6 +7,7 @@ const menu = require("./menu.routes");
 const category = require("./category.routes");
 const role = require("./role.routes");
 const staff = require("./staff.routes");
+const company = require("./company.routes");
 const auth = require("./auth.routes");
 const authMiddleware = require("../middlewares/auth.middleware");
 
@@ -36,4 +37,5 @@ module.exports = (app) => {
   app.use("/api/category", category);
   app.use("/api/role", role);
   app.use("/api/staff", staff);
+  app.use("/api/company", company);
 };

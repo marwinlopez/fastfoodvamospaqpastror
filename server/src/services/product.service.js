@@ -37,6 +37,20 @@ class ProductService {
     return await productRepository.update(id, updateData);
   }
 
+  // Reposición de inventario: suma unidades individuales al stock.
+  // El cliente traduce empaques a unidades (ej. 1 caja de 36 -> 36 unidades).
+  async restockProduct(id, unidades) {
+    const qty = parseFloat(unidades);
+    if (!qty || isNaN(qty)) {
+      throw new Error("La cantidad de unidades a reponer es inválida");
+    }
+    const updated = await productRepository.addStock(id, qty);
+    if (!updated) {
+      throw new Error("Producto no encontrado");
+    }
+    return updated;
+  }
+
   async searchProducts(query) {
     return await productRepository.searchByNameOrCoin(query);
   }

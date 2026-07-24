@@ -2,6 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import * as LocalAuthentication from "expo-local-authentication";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import apis from "../apis";
+import { BackgroundSyncService } from "./BackgroundSyncService";
 
 const SECURE_KEYS = {
   TOKEN: "auth_token",
@@ -56,6 +57,7 @@ export const AuthService = {
     try {
       await secureDelete(SECURE_KEYS.TOKEN);
       await AsyncStorage.removeItem(CACHE_KEYS.BIOMETRIC_ENABLED);
+      await BackgroundSyncService.clearSyncQueue();
     } catch (error) {
       console.log("[AuthService] Error al cerrar sesión:", error);
     }
@@ -120,13 +122,19 @@ export const AuthService = {
 
   // Habilita biometría: confirma que el sensor funciona antes de activarlo
   async enableBiometric() {
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: "Confirma tu huella para activar el acceso rápido",
-    });
-    if (result.success) {
-      await this.setBiometricEnabled(true);
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Confirma tu huella para activar el acceso rápido",
+      });
+      console.log("[AuthService] Resultado de authenticateAsync:", JSON.stringify(result));
+      if (result.success) {
+        await this.setBiometricEnabled(true);
+      }
+      return result;
+    } catch (error) {
+      console.log("[AuthService] Error activando biometría:", error);
+      return { success: false, error: error?.message || "unknown" };
     }
-    return result.success;
   },
 
   // Desbloquea la app con biometría; el token ya guardado se re-arma en el

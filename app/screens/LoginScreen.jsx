@@ -16,6 +16,19 @@ import useTheme from "../hooks/useTheme";
 import useGlobal from "../hooks/useGlobal";
 import { actionCreators } from "../hooks/GlobalReducer";
 import AuthService from "../services/AuthService";
+import apis from "../apis";
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Carga la empresa (marca/moneda/tema) tras un login exitoso.
+const loadCompany = async (dispatch) => {
+  try {
+    const { data } = await apis.getCompany();
+    if (data?.company) dispatch(actionCreators.companySet(data.company));
+  } catch (err) {
+    console.log("[LoginScreen] No se pudo cargar la empresa:", err?.message);
+  }
+};
 
 const LoginScreen = () => {
   const theme = useTheme();
@@ -53,8 +66,19 @@ const LoginScreen = () => {
         {
           text: "Activar",
           onPress: async () => {
-            await AuthService.enableBiometric();
-            dispatch(actionCreators.biometricSet(true));
+            // En Android, si el prompt nativo de huella se dispara mientras
+            // este Alert todavía se está cerrando, el SO a veces lo ignora.
+            await wait(300);
+            const result = await AuthService.enableBiometric();
+            if (result.success) {
+              dispatch(actionCreators.biometricSet(true));
+              Alert.alert("Listo", "Desbloqueo con huella activado.");
+            } else {
+              Alert.alert(
+                "No se pudo activar",
+                result.error || "No se reconoció tu huella. Inténtalo de nuevo desde Ajustes."
+              );
+            }
           },
         },
       ]
@@ -71,6 +95,7 @@ const LoginScreen = () => {
     try {
       const staff = await AuthService.login(email.trim(), password);
       dispatch(actionCreators.loginSuccess(staff));
+      await loadCompany(dispatch);
       await offerBiometricEnrollment();
     } catch (error) {
       setErrorMessage(
@@ -88,6 +113,7 @@ const LoginScreen = () => {
       const staff = await AuthService.promptBiometricUnlock();
       if (staff) {
         dispatch(actionCreators.loginSuccess(staff));
+        await loadCompany(dispatch);
       }
     } finally {
       setBiometricBusy(false);

@@ -27,7 +27,7 @@ class AuthService {
     }
 
     const token = jwt.sign(
-      { staffId: staff.id, roleId: staff.roleId },
+      { staffId: staff.id, roleId: staff.roleId, companyId: staff.companyId },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );

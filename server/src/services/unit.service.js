@@ -2,19 +2,7 @@ const unitRepository = require("../repositories/unit.repository");
 
 class UnitService {
   async getAllUnits() {
-    let units = await unitRepository.getAll();
-    if (units.length === 0) {
-      const defaultUnits = [
-        { name: "Gramos" },
-        { name: "Kilogramos" },
-        { name: "Unidades" },
-        { name: "Mililitros" },
-        { name: "Litros" },
-        { name: "Libras" },
-      ];
-      units = await unitRepository.createBatch(defaultUnits);
-    }
-    return units;
+    return await unitRepository.getAll();
   }
 
   async createUnit(data) {

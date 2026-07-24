@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -15,9 +15,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import apis from "../apis";
-import { COLORS } from "../constants/themes";
+import ScreenHeader from "../components/ScreenHeader";
+import useTheme from "../hooks/useTheme";
 
 const UnitSettingsScreen = ({ navigation }) => {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
@@ -51,7 +54,7 @@ const UnitSettingsScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const payload = { name: name.trim() };
-      
+
       if (editingId) {
         await apis.updateUnit(editingId, payload);
         ToastAndroid.show("Unidad de medida actualizada", ToastAndroid.SHORT);
@@ -59,7 +62,7 @@ const UnitSettingsScreen = ({ navigation }) => {
         await apis.createUnit(payload);
         ToastAndroid.show("Unidad de medida creada", ToastAndroid.SHORT);
       }
-      
+
       setName("");
       setEditingId(null);
       await fetchUnits();
@@ -106,31 +109,23 @@ const UnitSettingsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <ScreenHeader
+        theme={theme}
+        onBack={() => navigation.navigate("SettingsScreen")}
+        title="Unidades de Medida"
+        subtitle="Gestiona las unidades físicas usadas en inventario y recetas."
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.navigate("SettingsScreen")}
-            >
-              <Feather name="arrow-left" size={22} color={COLORS.default} />
-            </TouchableOpacity>
-            <View style={styles.headerTitleContainer}>
-              <Feather name="compass" size={22} color={COLORS.default} style={styles.headerIcon} />
-              <Text style={[styles.headerTitle, { color: COLORS.default }]}>Unidades de Medida</Text>
-            </View>
-          </View>
-
           {/* Form Card */}
           <View style={styles.formCard}>
-            <Text style={[styles.formTitle, { color: COLORS.default }]}>
+            <Text style={[styles.formTitle, { color: theme.brand }]}>
               {editingId ? "Editar Unidad" : "Nueva Unidad"}
             </Text>
             <Text style={styles.formSubtitle}>
@@ -142,14 +137,14 @@ const UnitSettingsScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Ej. Gramos, Litros, Unidades..."
-                placeholderTextColor="#A3A3A3"
+                placeholderTextColor={theme.textSecondary}
                 value={name}
                 onChangeText={setName}
               />
             </View>
 
-            <TouchableOpacity 
-              style={[styles.saveButton, { backgroundColor: COLORS.default }]} 
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: theme.brand }]}
               onPress={handleSave}
               activeOpacity={0.8}
             >
@@ -160,8 +155,8 @@ const UnitSettingsScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             {editingId && (
-              <TouchableOpacity 
-                style={styles.cancelButton} 
+              <TouchableOpacity
+                style={styles.cancelButton}
                 onPress={() => {
                   setEditingId(null);
                   setName("");
@@ -174,29 +169,29 @@ const UnitSettingsScreen = ({ navigation }) => {
 
           {/* List Section */}
           <Text style={styles.listSectionTitle}>LISTADO DE UNIDADES</Text>
-          
+
           {loading && units.length === 0 ? (
-            <ActivityIndicator size="large" color={COLORS.default} style={{ marginVertical: 20 }} />
+            <ActivityIndicator size="large" color={theme.brand} style={{ marginVertical: 20 }} />
           ) : (
             <View style={styles.listContainer}>
               {units.map((item) => (
                 <View key={item.id} style={styles.itemRow}>
                   <View style={styles.itemInfo}>
-                    <Feather name="activity" size={18} color={COLORS.default} style={styles.unitIcon} />
+                    <Feather name="activity" size={18} color={theme.brand} style={styles.unitIcon} />
                     <Text style={styles.itemName}>{item.name}</Text>
                   </View>
                   <View style={styles.actionsWrapper}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.editIconButton}
                       onPress={() => handleEdit(item)}
                     >
-                      <Feather name="edit-2" size={16} color="#6C757D" />
+                      <Feather name="edit-2" size={16} color={theme.textSecondary} />
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.deleteIconButton}
                       onPress={() => handleDelete(item)}
                     >
-                      <Feather name="trash-2" size={16} color="#D32F2F" />
+                      <Feather name="trash-2" size={16} color={theme.danger} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -213,56 +208,26 @@ const UnitSettingsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: t.background,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 15,
+    paddingTop: 8,
     paddingBottom: 40,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 25,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: "#FFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  headerTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    justifyContent: "center",
-    marginRight: 40,
-  },
-  headerIcon: {
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-  },
   formCard: {
-    backgroundColor: "#FFF",
+    backgroundColor: t.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 25,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
-    shadowColor: "#000",
+    borderColor: t.border,
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -273,7 +238,7 @@ const styles = StyleSheet.create({
   },
   formSubtitle: {
     fontSize: 12,
-    color: "#8E9AA6",
+    color: t.textSecondary,
     marginBottom: 16,
     lineHeight: 16,
   },
@@ -283,19 +248,19 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1A1D20",
+    color: t.textPrimary,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: "#F7F8FA",
+    backgroundColor: t.inputBg,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
-    color: "#1A1D20",
+    color: t.textPrimary,
     fontWeight: "600",
     borderWidth: 1,
-    borderColor: "#EAEAEA",
+    borderColor: t.border,
   },
   saveButton: {
     borderRadius: 12,
@@ -321,14 +286,14 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   cancelButtonText: {
-    color: "#8E9AA6",
+    color: t.textSecondary,
     fontSize: 14,
     fontWeight: "700",
   },
   listSectionTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#6C757D",
+    color: t.textSecondary,
     letterSpacing: 1.5,
     marginBottom: 15,
   },
@@ -337,16 +302,16 @@ const styles = StyleSheet.create({
   },
   itemRow: {
     flexDirection: "row",
-    backgroundColor: "#FFF",
+    backgroundColor: t.surface,
     borderRadius: 16,
     padding: 14,
     alignItems: "center",
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
-    shadowColor: "#000",
+    borderColor: t.border,
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.01,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 4,
     elevation: 1,
   },
@@ -361,7 +326,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1A1D20",
+    color: t.textPrimary,
   },
   actionsWrapper: {
     flexDirection: "row",
@@ -370,17 +335,17 @@ const styles = StyleSheet.create({
   editIconButton: {
     padding: 6,
     borderRadius: 8,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: t.inputBg,
     marginRight: 6,
   },
   deleteIconButton: {
     padding: 6,
     borderRadius: 8,
-    backgroundColor: "#FFF0F0",
+    backgroundColor: t.danger + "1A",
   },
   emptyText: {
     textAlign: "center",
-    color: "#8E9AA6",
+    color: t.textSecondary,
     fontSize: 14,
     fontWeight: "600",
     marginVertical: 20,

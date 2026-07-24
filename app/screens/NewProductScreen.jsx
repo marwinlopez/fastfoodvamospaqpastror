@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
-  StatusBar,
   StyleSheet,
   Text,
   ToastAndroid,
@@ -10,8 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "../components/Header";
-import { COLORS } from "../constants/themes";
+import ScreenHeader from "../components/ScreenHeader";
 import apis from "../apis";
 import NebulaTextInput from "../components/NebulaTextInput";
 import SelectDropdown from "react-native-select-dropdown";
@@ -20,18 +18,32 @@ import { Feather } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
 import { CameraView, Camera } from "expo-camera";
+import useTheme from "../hooks/useTheme";
+import useGlobal from "../hooks/useGlobal";
 
 const NewProductScreen = ({ navigation, route }) => {
+  const theme = useTheme();
+  const { company } = useGlobal();
+  const money = company?.currencySymbol || "$";
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { recipe, product } = route.params || {};
   const [name, setName] = useState(product ? product.producto : "");
-  const [price, setPrice] = useState(product ? product.precioCompra?.toString() : "");
-  const [qtyPresentacion, setQtyPresentacion] = useState(product ? product.cantidadPresentacion?.toString() : "");
-  const [qtyEmpaque, setQtyEmpaque] = useState(product ? product.cantidadEmpaque?.toString() : "1");
-  const [units, setUnits] = useState(["Seleccionar..."]);
+  const [price, setPrice] = useState(
+    product?.precioCompra != null ? Number(product.precioCompra).toFixed(2) : ""
+  );
+  const [qtyPresentacion, setQtyPresentacion] = useState(
+    product?.cantidadPresentacion != null ? Number(product.cantidadPresentacion).toFixed(2) : ""
+  );
+  const [qtyEmpaque, setQtyEmpaque] = useState(
+    product?.cantidadEmpaque != null ? Number(product.cantidadEmpaque).toFixed(2) : "1"
+  );
+  const [initialStock, setInitialStock] = useState("");
+  const [units, setUnits] = useState([]);
+  const [unitNames, setUnitNames] = useState(["Seleccionar..."]);
   const [selectedUnit, setSelectedUnit] = useState(
     product
-      ? { id: product.unidadMedidaId || 0, name: product.unidadMedida || "Seleccionar..." }
-      : { id: 0, name: "Seleccionar..." }
+      ? { id: product.unidadMedidaId || null, name: product.unidadMedida || "Seleccionar..." }
+      : { id: null, name: "Seleccionar..." }
   );
   const [loading, setLoading] = useState(false);
 
@@ -45,53 +57,21 @@ const NewProductScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     const loadUnits = async () => {
-      // 1. Carga desde cache local
-      const cached = await BackgroundSyncService.getCachedUnits();
-      if (cached && cached.length > 1) {
-        setUnits(cached);
-        if (product && product.unidadMedida) {
-          const idx = cached.indexOf(product.unidadMedida);
-          if (idx !== -1) {
-            setSelectedUnit({ id: idx, name: product.unidadMedida });
-          }
-        }
-      }
-
-      // 2. Carga asíncrona de fondo
       try {
         const { data } = await apis.unitOfMeasurements();
         const { unitOf } = data;
         if (unitOf && unitOf.length > 0) {
-          const uNames = ["Seleccionar...", ...unitOf.map((u) => u.name || u)];
-          setUnits(uNames);
-          BackgroundSyncService.preloadCatalogCache();
-          if (product && product.unidadMedida) {
-            const idx = uNames.indexOf(product.unidadMedida);
-            if (idx !== -1) {
-              setSelectedUnit({ id: idx, name: product.unidadMedida });
+          setUnits(unitOf);
+          setUnitNames(["Seleccionar...", ...unitOf.map((u) => u.name)]);
+          if (product && product.unidadMedidaId) {
+            const match = unitOf.find((u) => u.id === product.unidadMedidaId);
+            if (match) {
+              setSelectedUnit({ id: match.id, name: match.name });
             }
           }
         }
       } catch (err) {
-        console.log("[NewProductScreen] Falló pre-carga de unidades:", err);
-        if (!cached || cached.length <= 1) {
-          const fallbackUnits = [
-            "Seleccionar...",
-            "Gramos",
-            "Kilogramos",
-            "Unidades",
-            "Mililitros",
-            "Litros",
-            "Libras",
-          ];
-          setUnits(fallbackUnits);
-          if (product && product.unidadMedida) {
-            const idx = fallbackUnits.indexOf(product.unidadMedida);
-            if (idx !== -1) {
-              setSelectedUnit({ id: idx, name: product.unidadMedida });
-            }
-          }
-        }
+        console.log("[NewProductScreen] Error cargando unidades:", err);
       }
     };
     loadUnits();
@@ -158,8 +138,7 @@ const NewProductScreen = ({ navigation, route }) => {
       !name.trim() ||
       !price ||
       !qtyPresentacion ||
-      !qtyEmpaque ||
-      selectedUnit.name === "Seleccionar..."
+      !qtyEmpaque
     ) {
       ToastAndroid.show(
         "Por favor, rellene todos los campos",
@@ -177,9 +156,10 @@ const NewProductScreen = ({ navigation, route }) => {
       precioCompra: parseFloat(price),
       cantidadPresentacion: parseFloat(qtyPresentacion),
       cantidadEmpaque: parseFloat(qtyEmpaque),
-      unidadMedida: selectedUnit.name,
-      unidadMedidaId: selectedUnit.id,
+      unidadMedida: selectedUnit.name !== "Seleccionar..." ? selectedUnit.name : null,
+      unidadMedidaId: selectedUnit.id || null,
       codigoBarra: barcode.trim() !== "" ? barcode.trim() : null,
+      ...(product ? {} : { stock: parseFloat(initialStock || 0) }),
     };
 
     if (product) {
@@ -250,16 +230,15 @@ const NewProductScreen = ({ navigation, route }) => {
     price.length > 0 &&
     qtyPresentacion.length > 0 &&
     qtyEmpaque.length > 0 &&
-    selectedUnit.name !== "Seleccionar..." &&
     !barcodeExists;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
-      <Header
-        title={product ? "EDITAR PRODUCTO" : "REGISTRAR PRODUCTO"}
-        buttonLeft="arrow-left"
-        actionLeft={() => navigation.push("MaterialsScreen", { recipe })}
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <ScreenHeader
+        theme={theme}
+        onBack={() => navigation.push("MaterialsScreen", { recipe })}
+        title={product ? "Editar Producto" : "Registrar Producto"}
+        subtitle="Completa los datos del producto de inventario."
       />
 
       <KeyboardAwareScrollView
@@ -272,6 +251,7 @@ const NewProductScreen = ({ navigation, route }) => {
           <View style={styles.formGroup}>
             <Text style={styles.label}>Nombre del Producto</Text>
             <NebulaTextInput
+              theme={theme}
               placeholder="Ej. Queso Mozzarella"
               value={name}
               onChangeText={setName}
@@ -284,6 +264,7 @@ const NewProductScreen = ({ navigation, route }) => {
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <NebulaTextInput
+                  theme={theme}
                   placeholder="Ej. 750123456789"
                   value={barcode}
                   onChangeText={handleBarcodeChange}
@@ -303,46 +284,55 @@ const NewProductScreen = ({ navigation, route }) => {
             )}
           </View>
 
-          {/* Precio de Compra */}
+          {/* Precio de Compra del Empaque */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Precio de Compra (USD)</Text>
+            <Text style={styles.label}>Precio del Empaque ({money})</Text>
             <NebulaTextInput
+              theme={theme}
               placeholder="Ej. 5.50"
               inputMode="numeric"
               value={price}
               onChangeText={setPrice}
             />
+            <Text style={styles.helperText}>
+              Precio de compra del empaque completo (ej. la caja).
+            </Text>
           </View>
 
-          {/* Cantidades (Fila) */}
+          {/* Estructura del empaque (Fila) */}
           <View style={styles.rowGroup}>
             <View style={[styles.formGroup, { flex: 1, marginRight: 12 }]}>
-              <Text style={styles.label}>Presentación (Cant.)</Text>
+              <Text style={styles.label}>Unid. por Empaque</Text>
               <NebulaTextInput
-                placeholder="Ej. 1000"
-                inputMode="numeric"
-                value={qtyPresentacion}
-                onChangeText={setQtyPresentacion}
-              />
-            </View>
-
-            <View style={[styles.formGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Empaque (Cant.)</Text>
-              <NebulaTextInput
-                placeholder="Ej. 1"
+                theme={theme}
+                placeholder="Ej. 36"
                 inputMode="numeric"
                 value={qtyEmpaque}
                 onChangeText={setQtyEmpaque}
               />
             </View>
+
+            <View style={[styles.formGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Contenido por Unid.</Text>
+              <NebulaTextInput
+                theme={theme}
+                placeholder="Ej. 244"
+                inputMode="numeric"
+                value={qtyPresentacion}
+                onChangeText={setQtyPresentacion}
+              />
+            </View>
           </View>
+          <Text style={[styles.helperText, { marginTop: -8, marginBottom: 16 }]}>
+            Ej. una caja de malta trae 36 botellas de 244 ml: Unid. por Empaque =
+            36, Contenido por Unid. = 244, Unidad de Medida = Mililitros.
+          </Text>
 
           {/* Unidad de Medida */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Unidad de Medida</Text>
             <SelectDropdown
-              data={units}
-              defaultValueByIndex={selectedUnit.id}
+              data={unitNames}
               defaultButtonText={selectedUnit.name}
               buttonStyle={styles.dropdownButton}
               buttonTextStyle={styles.dropdownButtonText}
@@ -352,18 +342,52 @@ const NewProductScreen = ({ navigation, route }) => {
               renderDropdownIcon={(isOpened) => (
                 <Feather
                   name={isOpened ? "chevron-up" : "chevron-down"}
-                  color="#8E9AA6"
+                  color={theme.textSecondary}
                   size={18}
                 />
               )}
               dropdownIconPosition="right"
               onSelect={(selectedItem, index) => {
-                setSelectedUnit({ id: index, name: selectedItem });
+                if (index === 0) {
+                  setSelectedUnit({ id: null, name: "Seleccionar..." });
+                } else {
+                  const unit = units[index - 1];
+                  setSelectedUnit({ id: unit?.id || null, name: selectedItem });
+                }
               }}
               buttonTextAfterSelection={(selectedItem) => selectedItem}
               rowTextForSelection={(item) => item}
             />
           </View>
+
+          {/* Stock inicial (solo al crear) */}
+          {!product ? (
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Stock Inicial (Unidades)</Text>
+              <NebulaTextInput
+                theme={theme}
+                placeholder="Ej. 36"
+                inputMode="numeric"
+                value={initialStock}
+                onChangeText={setInitialStock}
+              />
+              <Text style={styles.helperText}>
+                Unidades individuales disponibles al registrar
+                {parseFloat(initialStock) > 0 && parseFloat(qtyEmpaque) > 0
+                  ? ` (equivale a ${(parseFloat(initialStock) / parseFloat(qtyEmpaque)).toFixed(2)} empaque(s))`
+                  : ""}
+                .
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.stockInfoBox}>
+              <Feather name="box" size={16} color={theme.brand} style={{ marginRight: 8 }} />
+              <Text style={styles.stockInfoText}>
+                Stock actual: {Number(product.stock || 0).toFixed(2)} unidades.
+                Usa "Reponer" en el Inventario para ajustarlo.
+              </Text>
+            </View>
+          )}
 
           {/* Botón de Registro */}
           <Button
@@ -421,10 +445,10 @@ const NewProductScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: t.background,
   },
   scrollContainer: {
     paddingHorizontal: 20,
@@ -432,12 +456,12 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   formCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: t.surface,
     borderRadius: 24,
     padding: 20,
-    shadowColor: "#1A1D20",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 16,
     elevation: 3,
   },
@@ -451,14 +475,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#8E9AA6",
+    color: t.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 1.1,
     marginBottom: 8,
   },
   dropdownButton: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E0E0E0",
+    backgroundColor: t.surface,
+    borderColor: t.border,
     borderWidth: 1,
     borderRadius: 14,
     height: 46,
@@ -466,27 +490,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   dropdownButtonText: {
-    color: "#1A1D20",
+    color: t.textPrimary,
     fontSize: 14,
     fontWeight: "500",
     textAlign: "left",
   },
   dropdownMenu: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: t.surface,
     borderRadius: 16,
     borderWidth: 0,
-    shadowColor: "#1A1D20",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 4,
   },
   dropdownRow: {
-    borderBottomColor: "#F5F5F5",
+    borderBottomColor: t.border,
     height: 44,
   },
   dropdownRowText: {
-    color: "#1A1D20",
+    color: t.textPrimary,
     fontSize: 14,
     textAlign: "left",
     paddingLeft: 16,
@@ -497,22 +521,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonStyle: {
-    backgroundColor: "#5802F1",
+    backgroundColor: t.brand,
     paddingVertical: 12,
     borderRadius: 14,
   },
   buttonDisabledStyle: {
-    backgroundColor: "#8041ec",
+    backgroundColor: t.brand + "80",
   },
   buttonDisabledTitleStyle: {
-    color: "#F5F5F5",
+    color: "#E4D5FF",
   },
   buttonTitle: {
     fontSize: 14,
     fontWeight: "700",
   },
   scanButton: {
-    backgroundColor: "#5802F1",
+    backgroundColor: t.brand,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 14,
@@ -521,10 +545,33 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   errorText: {
-    color: "#EF4444",
+    color: t.danger,
     fontSize: 12,
     fontWeight: "600",
     marginTop: 6,
+  },
+  helperText: {
+    fontSize: 11,
+    color: t.textSecondary,
+    marginTop: 6,
+    lineHeight: 15,
+  },
+  stockInfoBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: t.brand + "14",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: t.brand + "26",
+  },
+  stockInfoText: {
+    flex: 1,
+    fontSize: 12,
+    color: t.textPrimary,
+    fontWeight: "600",
+    lineHeight: 16,
   },
   scannerModalContainer: {
     flex: 1,
@@ -548,7 +595,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   cancelScannerButton: {
-    backgroundColor: "#EF4444",
+    backgroundColor: t.danger,
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 14,

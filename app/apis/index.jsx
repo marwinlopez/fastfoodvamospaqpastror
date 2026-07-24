@@ -58,6 +58,7 @@ export const ingredientForId = (id) => api.get(`/ingredient/${id}`);
 export const unitOfMeasurements = () => api.get("/unit/");
 export const createProduct = (payload) => api.post("/product/create", payload);
 export const updateProduct = (id, payload) => api.put(`/product/update/${id}`, payload);
+export const restockProduct = (id, payload) => api.post(`/product/restock/${id}`, payload);
 export const updateRecipe = (id, payload) => api.put(`/recipe/update/${id}`, payload);
 export const deleteRecipe = (id) => api.delete(`/recipe/delete/${id}`);
 
@@ -92,6 +93,10 @@ export const createRole = (payload) => api.post("/role/create", payload);
 export const updateRole = (id, payload) => api.put(`/role/update/${id}`, payload);
 export const deleteRole = (id) => api.delete(`/role/delete/${id}`);
 
+// Empresa (multi-tenant): datos de marca, moneda y tema
+export const getCompany = () => api.get("/company");
+export const updateCompany = (payload) => api.put("/company/update", payload);
+
 const apis = {
   setAuthToken,
   setUnauthorizedHandler,
@@ -107,6 +112,7 @@ const apis = {
   unitOfMeasurements,
   createProduct,
   updateProduct,
+  restockProduct,
   updateRecipe,
   deleteRecipe,
   updateIngredient,
@@ -130,6 +136,8 @@ const apis = {
   createRole,
   updateRole,
   deleteRole,
+  getCompany,
+  updateCompany,
 };
 
 export default apis;

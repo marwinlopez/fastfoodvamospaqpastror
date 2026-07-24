@@ -2,6 +2,7 @@ const ingredientRepository = require("../repositories/ingredient.repository");
 const productRepository = require("../repositories/product.repository");
 const recipeRepository = require("../repositories/recipe.repository");
 const recipeService = require("./recipe.service");
+const { convertUnits } = require("../utils/unit-conversion");
 
 class IngredientService {
   async getIngredientById(id) {
@@ -143,8 +144,17 @@ class IngredientService {
         const price = parseFloat(product.precioCompra || product.price || 0);
         const packQty = parseFloat(product.cantidadPresentacion || 1);
         const unitQty = parseFloat(product.cantidadEmpaque || 1);
+        // Precio por unidad de contenido, en la unidad de medida del producto
+        // (ej. precio de la caja / (36 botellas × 244 ml) = precio por ml)
         const unitPrice = price / (packQty * unitQty);
-        cost = unitPrice * qty;
+        // Convertir la cantidad usada en la receta a la unidad del producto
+        // (ej. receta pide 200 gr de un producto registrado en kg)
+        const qtyInProductUnit = convertUnits(
+          qty,
+          unitOfMeasurement,
+          product.unidadMedida
+        );
+        cost = unitPrice * qtyInProductUnit;
       } else {
         description = "Ingrediente " + productId;
         cost = 1.0 * qty;

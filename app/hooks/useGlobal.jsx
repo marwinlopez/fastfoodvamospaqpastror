@@ -7,6 +7,8 @@ const useGlobal = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(state.isAuthenticated);
   const [user, setUser] = useState(state.user);
   const [biometricEnabled, setBiometricEnabled] = useState(state.biometricEnabled);
+  const [isUnlocked, setIsUnlocked] = useState(state.isUnlocked);
+  const [company, setCompany] = useState(state.company);
 
   useEffect(() => {
     setLoading(state.loading);
@@ -24,12 +26,22 @@ const useGlobal = () => {
     setBiometricEnabled(state.biometricEnabled);
   }, [state.biometricEnabled]);
 
+  useEffect(() => {
+    setIsUnlocked(state.isUnlocked);
+  }, [state.isUnlocked]);
+
+  useEffect(() => {
+    setCompany(state.company);
+  }, [state.company]);
+
   return {
     loading,
     setLoading,
     isAuthenticated,
     user,
     biometricEnabled,
+    isUnlocked,
+    company,
     dispatch,
   };
 };

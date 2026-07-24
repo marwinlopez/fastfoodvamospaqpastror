@@ -11,6 +11,23 @@ DROP TABLE IF EXISTS "roles" CASCADE;
 DROP TABLE IF EXISTS "categories" CASCADE;
 DROP TABLE IF EXISTS "units" CASCADE;
 DROP TABLE IF EXISTS "divisas" CASCADE;
+DROP TABLE IF EXISTS "companies" CASCADE;
+
+-- 0. Tabla Empresas (multi-tenant): datos de marca, moneda y tema por tenant
+CREATE TABLE "companies" (
+  "id" VARCHAR(100) PRIMARY KEY,
+  "name" VARCHAR(255) NOT NULL,
+  "slogan" VARCHAR(255),
+  "phone" VARCHAR(50),
+  "address" VARCHAR(255),
+  "currency" VARCHAR(10) DEFAULT 'USD',
+  "currencySymbol" VARCHAR(5) DEFAULT '$',
+  "themeMode" VARCHAR(10) DEFAULT 'system', -- light | dark | system
+  "createdAt" TIMESTAMPTZ DEFAULT now()
+);
+
+INSERT INTO "companies" ("id", "name", "slogan")
+VALUES ('company-default', 'PA Q'' PASTOR', 'Venta de comida');
 
 -- 1. Tabla Divisas
 CREATE TABLE "divisas" (
@@ -22,16 +39,23 @@ CREATE TABLE "divisas" (
 -- 2. Tabla Unidades de Medida
 CREATE TABLE "units" (
   "id" VARCHAR(100) PRIMARY KEY,
-  "name" VARCHAR(100) NOT NULL UNIQUE
+  "name" VARCHAR(100) NOT NULL UNIQUE,
+  "companyId" VARCHAR(100) DEFAULT 'company-default' REFERENCES "companies"("id")
 );
 
 -- 3. Tabla Categorías
 CREATE TABLE "categories" (
   "id" VARCHAR(100) PRIMARY KEY,
-  "name" VARCHAR(100) NOT NULL UNIQUE
+  "name" VARCHAR(100) NOT NULL UNIQUE,
+  "companyId" VARCHAR(100) DEFAULT 'company-default' REFERENCES "companies"("id")
 );
 
 -- 4. Tabla Productos (Ingredientes crudos/Insumos)
+-- precioCompra         = precio del empaque completo (ej. la caja)
+-- cantidadEmpaque      = unidades por empaque (ej. 36 botellas)
+-- cantidadPresentacion = contenido por unidad (ej. 244)
+-- unidadMedida         = unidad del contenido (ej. Mililitros)
+-- stock                = unidades individuales disponibles (ej. botellas)
 CREATE TABLE "products" (
   "id" VARCHAR(100) PRIMARY KEY,
   "producto" VARCHAR(255) NOT NULL,
@@ -40,10 +64,14 @@ CREATE TABLE "products" (
   "cantidadEmpaque" NUMERIC(20, 4) DEFAULT 0,
   "unidadMedida" VARCHAR(100),
   "unidadMedidaId" VARCHAR(100) REFERENCES "units"("id") ON DELETE SET NULL,
-  "codigoBarra" VARCHAR(100)
+  "codigoBarra" VARCHAR(100),
+  "stock" NUMERIC(20, 4) DEFAULT 0,
+  "companyId" VARCHAR(100) DEFAULT 'company-default' REFERENCES "companies"("id")
 );
 
 -- 5. Tabla Recetas (Sub-recetas y recetas de preparación)
+-- labor = [{ "role": "COCINERO", "hourlyRate": 12.50, "hours": 0.5 }, ...]
+-- cost  = (insumos + Σ(hourlyRate×hours)) / (1 - merma/100)
 CREATE TABLE "recipes" (
   "id" VARCHAR(100) PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL,
@@ -53,7 +81,9 @@ CREATE TABLE "recipes" (
   "weight" NUMERIC(20, 4) DEFAULT 0,
   "merma" NUMERIC(20, 4) DEFAULT 0,
   "coin" VARCHAR(10) DEFAULT 'USD',
-  "isActive" BOOLEAN DEFAULT TRUE
+  "isActive" BOOLEAN DEFAULT TRUE,
+  "labor" JSONB DEFAULT '[]',
+  "companyId" VARCHAR(100) DEFAULT 'company-default' REFERENCES "companies"("id")
 );
 
 -- 6. Tabla Ingredientes (Detalle de cada receta)
@@ -74,7 +104,8 @@ CREATE TABLE "ingredients" (
 CREATE TABLE "roles" (
   "id" VARCHAR(100) PRIMARY KEY,
   "name" VARCHAR(100) NOT NULL UNIQUE,
-  "permissions" TEXT[] DEFAULT '{}'::TEXT[]
+  "permissions" TEXT[] DEFAULT '{}'::TEXT[],
+  "companyId" VARCHAR(100) DEFAULT 'company-default' REFERENCES "companies"("id")
 );
 
 -- 8. Tabla Personal (Staff)
@@ -85,7 +116,8 @@ CREATE TABLE "staff" (
   "phone" VARCHAR(100),
   "roleId" VARCHAR(100) REFERENCES "roles"("id") ON DELETE SET NULL,
   "isActive" BOOLEAN DEFAULT TRUE,
-  "passwordHash" VARCHAR(255)
+  "passwordHash" VARCHAR(255),
+  "companyId" VARCHAR(100) DEFAULT 'company-default' REFERENCES "companies"("id")
 );
 
 -- Índice único parcial (ignora email vacío/NULL) e insensible a mayúsculas,
@@ -103,5 +135,6 @@ CREATE TABLE "menu" (
   "category" VARCHAR(100),
   "imageUrl" TEXT,
   "stock" INTEGER DEFAULT 0,
-  "isActive" BOOLEAN DEFAULT TRUE
+  "isActive" BOOLEAN DEFAULT TRUE,
+  "companyId" VARCHAR(100) DEFAULT 'company-default' REFERENCES "companies"("id")
 );

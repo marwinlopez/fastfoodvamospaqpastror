@@ -2,16 +2,7 @@ const categoryRepository = require("../repositories/category.repository");
 
 class CategoryService {
   async getAllCategories() {
-    let categories = await categoryRepository.getAll();
-    if (categories.length === 0) {
-      const defaultCategories = [
-        { name: "Hamburguesas" },
-        { name: "Papas" },
-        { name: "Bebidas" },
-      ];
-      categories = await categoryRepository.createBatch(defaultCategories);
-    }
-    return categories;
+    return await categoryRepository.getAll();
   }
 
   async createCategory(data) {

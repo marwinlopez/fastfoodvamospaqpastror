@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "Fast Food",
+    "name": "Valent-App",
     "slug": "JL Fast Food",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
-    "icon": "./assets/JLLogo.png",
+    "icon": "./assets/valent-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "cover",
-      "backgroundColor": "#0b1828"
+      "backgroundColor": "#0A0A12"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -20,8 +20,8 @@
     ],
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0b1828"
+        "foregroundImage": "./assets/valent-adaptive.png",
+        "backgroundColor": "#5802F1"
       },
       "package": "com.marwinlopez.jlfastfood",
       "permissions": [
@@ -38,16 +38,16 @@
       }
     },
     "androidStatusBar": {
-      "backgroundColor": "#0b1828",
+      "backgroundColor": "#0A0A12",
       "barStyle": "light-content",
       "hidden": true
     },
     "androidNavigationBar": {
-      "backgroundColor": "#0b1828",
+      "backgroundColor": "#0A0A12",
       "barStyle": "light-content"
     },
     "web": {
-      "favicon": "./assets/JLLogo.png"
+      "favicon": "./assets/valent-icon.png"
     },
     "plugins": [
       "expo-camera",

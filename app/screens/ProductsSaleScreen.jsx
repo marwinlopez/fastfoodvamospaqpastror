@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,25 +11,20 @@ import {
   ActivityIndicator,
   ToastAndroid,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import ScreenHeader from "../components/ScreenHeader";
 import apis from "../apis";
-import { COLORS } from "../constants/themes";
-
-const DEFAULT_IMAGES = {
-  Hamburguesas: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500",
-  Papas: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500",
-  Bebidas: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500",
-};
+import useTheme from "../hooks/useTheme";
 
 const ProductsSaleScreen = ({ navigation }) => {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState(["Todos"]);
   const [loading, setLoading] = useState(true);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
 
@@ -108,39 +103,29 @@ const ProductsSaleScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.userInfo}>
-          <Image 
-            source={{ uri: "https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=100" }} 
-            style={styles.avatar} 
-          />
-          <Text style={[styles.brandName, { color: COLORS.default }]}>PA Q' PASTOR</Text>
-        </View>
-        <TouchableOpacity style={styles.bellButton}>
-          <Feather name="bell" size={22} color="#1A1D20" />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        theme={theme}
+        onBack={() => navigation.navigate("HomeScreen")}
+        title="Gestionar Menú"
+        subtitle="Administra los artículos del menú y su disponibilidad."
+        rightContent={
+          <TouchableOpacity style={styles.bellButton}>
+            <Feather name="bell" size={22} color={theme.textPrimary} />
+          </TouchableOpacity>
+        }
+      />
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Title Section */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.titleText}>Gestión de Productos</Text>
-          <Text style={styles.subtitleText}>
-            Administra los artículos para la venta y su disponibilidad en tienda.
-          </Text>
-        </View>
-
         {/* Search Bar */}
         <View style={styles.searchBarContainer}>
-          <Feather name="search" size={20} color="#8E9AA6" style={styles.searchIcon} />
+          <Feather name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar productos..."
-            placeholderTextColor="#8E9AA6"
+            placeholderTextColor={theme.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -156,7 +141,7 @@ const ProductsSaleScreen = ({ navigation }) => {
                   key={cat}
                   style={[
                     styles.categoryTab,
-                    isActive ? { backgroundColor: COLORS.default } : styles.categoryTabInactive
+                    isActive ? { backgroundColor: theme.brand } : styles.categoryTabInactive
                   ]}
                   onPress={() => setSelectedCategory(cat)}
                 >
@@ -176,20 +161,26 @@ const ProductsSaleScreen = ({ navigation }) => {
 
         {/* Product Cards List */}
         {loading && menuItems.length === 0 ? (
-          <ActivityIndicator size="large" color={COLORS.default} style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={theme.brand} style={{ marginTop: 40 }} />
         ) : (
           <View style={styles.productsList}>
             {filteredItems.map((item) => {
               const isAvailable = item.isActive && (item.stock !== undefined ? item.stock > 0 : true);
               const currentStock = item.stock !== undefined ? item.stock : 0;
-              const displayImage = item.imageUrl || DEFAULT_IMAGES[item.category] || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500";
-              
+              const displayImage = item.imageUrl || null;
+
               return (
                 <View key={item.id || item.menuId} style={styles.productCard}>
                   {/* Image container with overlays */}
                   <View style={styles.imageContainer}>
-                    <Image source={{ uri: displayImage }} style={styles.productImage} />
-                    
+                    {displayImage ? (
+                      <Image source={{ uri: displayImage }} style={styles.productImage} />
+                    ) : (
+                      <View style={[styles.productImage, styles.productImagePlaceholder]}>
+                        <Feather name="image" size={32} color={theme.textSecondary} />
+                      </View>
+                    )}
+
                     {/* Availability Badge */}
                     <View style={[
                       styles.availabilityBadge,
@@ -205,7 +196,7 @@ const ProductsSaleScreen = ({ navigation }) => {
 
                     {/* Stock Badge */}
                     <View style={styles.stockBadge}>
-                      <Text style={styles.stockText}>{currentStock} en inventario</Text>
+                      <Text style={styles.stockText}>{Number(currentStock || 0).toFixed(2)} en inventario</Text>
                     </View>
                   </View>
 
@@ -213,7 +204,7 @@ const ProductsSaleScreen = ({ navigation }) => {
                   <View style={styles.detailsContainer}>
                     <View style={styles.titleRow}>
                       <Text style={styles.productName}>{item.name}</Text>
-                      <Text style={[styles.productPrice, { color: COLORS.orange || "#F4511E" }]}>
+                      <Text style={[styles.productPrice, { color: theme.warning }]}>
                         ${parseFloat(item.price).toFixed(2)}
                       </Text>
                     </View>
@@ -221,21 +212,21 @@ const ProductsSaleScreen = ({ navigation }) => {
 
                     {/* Action buttons */}
                     <View style={styles.actionsRow}>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.editButton}
                         activeOpacity={0.7}
                         onPress={() => navigation.navigate("MenuScreen", { item })}
                       >
-                        <Feather name="edit-2" size={16} color="#5C6B73" style={styles.buttonIcon} />
+                        <Feather name="edit-2" size={16} color={theme.textSecondary} style={styles.buttonIcon} />
                         <Text style={styles.editButtonText}>Editar</Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.deleteButton}
                         activeOpacity={0.7}
                         onPress={() => handleDelete(item)}
                       >
-                        <Feather name="trash-2" size={18} color="#C62828" />
+                        <Feather name="trash-2" size={18} color={theme.danger} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -252,7 +243,7 @@ const ProductsSaleScreen = ({ navigation }) => {
 
       {/* FAB - Crear Producto */}
       <TouchableOpacity
-        style={[styles.fabButton, { backgroundColor: COLORS.default }]}
+        style={[styles.fabButton, { backgroundColor: theme.brand }]}
         activeOpacity={0.85}
         onPress={() => navigation.navigate("MenuScreen", { item: null })}
       >
@@ -263,31 +254,31 @@ const ProductsSaleScreen = ({ navigation }) => {
       {/* Footer Navigation */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerTab}>
-          <Feather name="package" size={20} color={COLORS.default} />
-          <Text style={[styles.footerTabText, { color: COLORS.default }]}>Productos</Text>
+          <Feather name="package" size={20} color={theme.brand} />
+          <Text style={[styles.footerTabText, { color: theme.brand }]}>Productos</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => ToastAndroid.show("Pedidos estará disponible pronto", ToastAndroid.SHORT)}
         >
-          <Feather name="shopping-bag" size={20} color="#8E9AA6" />
+          <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Pedidos</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => ToastAndroid.show("Promos estará disponible pronto", ToastAndroid.SHORT)}
         >
-          <Feather name="gift" size={20} color="#8E9AA6" />
+          <Feather name="gift" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Promos</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => navigation.navigate("SettingsScreen")}
         >
-          <Feather name="settings" size={20} color="#8E9AA6" />
+          <Feather name="settings" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Ajustes</Text>
         </TouchableOpacity>
       </View>
@@ -295,62 +286,23 @@ const ProductsSaleScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAF9F6",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EAEAEA",
-  },
-  userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    marginRight: 10,
-  },
-  brandName: {
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    backgroundColor: t.background,
   },
   bellButton: {
     padding: 8,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 8,
     paddingBottom: 110,
-  },
-  titleContainer: {
-    marginBottom: 20,
-  },
-  titleText: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#1A1D20",
-    marginBottom: 6,
-  },
-  subtitleText: {
-    fontSize: 13,
-    color: "#6C757D",
-    lineHeight: 18,
   },
   searchBarContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#EEEEEE",
+    backgroundColor: t.inputBg,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -362,7 +314,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#1A1D20",
+    color: t.textPrimary,
     fontWeight: "600",
   },
   categoriesContainer: {
@@ -377,7 +329,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   categoryTabInactive: {
-    backgroundColor: "#EAEAEA",
+    backgroundColor: t.inputBg,
   },
   categoryText: {
     fontSize: 13,
@@ -387,21 +339,21 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   categoryTextInactive: {
-    color: "#5C6B73",
+    color: t.textSecondary,
   },
   productsList: {
     marginBottom: 10,
   },
   productCard: {
-    backgroundColor: "#FFF",
+    backgroundColor: t.surface,
     borderRadius: 20,
     overflow: "hidden",
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#EAEAEA",
-    shadowColor: "#000",
+    borderColor: t.border,
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -414,6 +366,11 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "cover",
   },
+  productImagePlaceholder: {
+    backgroundColor: t.inputBg,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   availabilityBadge: {
     position: "absolute",
     top: 12,
@@ -423,26 +380,26 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   badgeAvailable: {
-    backgroundColor: "#E8F5E9",
+    backgroundColor: t.success + "26",
   },
   badgeOutOfStock: {
-    backgroundColor: "#FFEBEE",
+    backgroundColor: t.danger + "26",
   },
   badgeText: {
     fontSize: 10,
     fontWeight: "800",
   },
   badgeTextAvailable: {
-    color: "#2E7D32",
+    color: t.success,
   },
   badgeTextOutOfStock: {
-    color: "#C62828",
+    color: t.danger,
   },
   stockBadge: {
     position: "absolute",
     bottom: 12,
     right: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: t.surface + "E6",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -450,7 +407,7 @@ const styles = StyleSheet.create({
   stockText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#1A1D20",
+    color: t.textPrimary,
   },
   detailsContainer: {
     padding: 16,
@@ -464,7 +421,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#1A1D20",
+    color: t.textPrimary,
     flex: 1,
     marginRight: 10,
   },
@@ -475,7 +432,7 @@ const styles = StyleSheet.create({
   productCategory: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#8E9AA6",
+    color: t.textSecondary,
     marginBottom: 16,
     letterSpacing: 0.5,
   },
@@ -487,7 +444,7 @@ const styles = StyleSheet.create({
   editButton: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "#F0F0F0",
+    backgroundColor: t.inputBg,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: "center",
@@ -500,10 +457,10 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1A1D20",
+    color: t.textPrimary,
   },
   deleteButton: {
-    backgroundColor: "#FFF0F0",
+    backgroundColor: t.danger + "1A",
     padding: 10,
     borderRadius: 12,
     alignItems: "center",
@@ -511,7 +468,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: "center",
-    color: "#8E9AA6",
+    color: t.textSecondary,
     fontSize: 14,
     fontWeight: "600",
     marginVertical: 40,
@@ -546,10 +503,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 64,
-    backgroundColor: "#FFF",
+    backgroundColor: t.headerBg,
     flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: "#ECEFF1",
+    borderTopColor: t.border,
     justifyContent: "space-around",
     alignItems: "center",
   },
@@ -563,7 +520,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     marginTop: 4,
-    color: "#8E9AA6",
+    color: t.textSecondary,
   },
 });
 

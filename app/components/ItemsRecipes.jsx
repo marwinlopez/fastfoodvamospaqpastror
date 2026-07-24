@@ -1,4 +1,4 @@
-import React, { useState, memo } from "react";
+import React, { useState, memo, useMemo } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -8,10 +8,15 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { COLORS } from "../constants/themes";
+import useTheme from "../hooks/useTheme";
+import useGlobal from "../hooks/useGlobal";
 
 const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh }) => {
   const [refreshing] = useState(false);
+  const theme = useTheme();
+  const { company } = useGlobal();
+  const money = company?.currencySymbol || "$";
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   return (
     <FlatList
@@ -21,7 +26,7 @@ const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh })
       data={recipes}
       ListEmptyComponent={() => (
         <View style={styles.emptyContainer}>
-          <Feather name="folder-minus" size={40} color="#8E9AA6" />
+          <Feather name="folder-minus" size={40} color={theme.textSecondary} />
           <Text style={styles.emptyText}>No existen registros</Text>
         </View>
       )}
@@ -30,13 +35,13 @@ const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh })
           <View style={styles.card}>
             <View style={styles.cardLeft}>
               <View style={styles.iconWrapper}>
-                <Feather name="book-open" size={20} color="#5802F1" />
+                <Feather name="book-open" size={20} color={theme.brand} />
               </View>
               <View style={styles.textContent}>
                 <Text style={styles.recipeName}>{item.name}</Text>
                 <View style={styles.costBadge}>
                   <Text style={styles.costText}>
-                    Costo: {item.coin || "USD"}{" "}
+                    Costo: {money}{" "}
                     {item.cost !== undefined ? Number(item.cost).toFixed(2) : "0.00"}
                   </Text>
                 </View>
@@ -44,14 +49,14 @@ const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh })
             </View>
             <View style={[styles.cardRight, { flexDirection: "row", alignItems: "center" }]}>
               {isSelectionMode ? (
-                <Feather name="plus-circle" size={24} color="#5802F1" style={{ padding: 8 }} />
+                <Feather name="plus-circle" size={24} color={theme.brand} style={{ padding: 8 }} />
               ) : (
                 <>
                   <TouchableOpacity onPress={() => edit("RecipeScreen", "editRecipe", item)} style={{ padding: 8 }}>
-                    <Feather name="edit-2" size={18} color="#8E9AA6" />
+                    <Feather name="edit-2" size={18} color={theme.textSecondary} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => deleteItem(item)} style={{ padding: 8 }}>
-                    <Feather name="trash-2" size={18} color="#FF3B30" />
+                    <Feather name="trash-2" size={18} color={theme.danger} />
                   </TouchableOpacity>
                 </>
               )}
@@ -73,7 +78,7 @@ const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh })
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={[COLORS.default]}
+          colors={[theme.brand]}
         />
       }
       showsVerticalScrollIndicator={false}
@@ -81,7 +86,7 @@ const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh })
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   list: {
     flex: 1,
   },
@@ -94,33 +99,32 @@ const styles = StyleSheet.create({
     height: 200,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: t.surface,
     borderRadius: 24,
     marginTop: 20,
-    shadowColor: "#000",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 8,
     elevation: 1,
   },
   emptyText: {
     fontSize: 14,
-    color: "#8E9AA6",
+    color: t.textSecondary,
     marginTop: 12,
     fontWeight: "600",
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: t.surface,
     borderRadius: 20,
     padding: 16,
     marginVertical: 8,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // Sombras premium sutiles (Efecto Canvas)
-    shadowColor: "#1A1D20",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.03,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 12,
     elevation: 2,
   },
@@ -133,7 +137,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#5802F110", // Fondo suave púrpura
+    backgroundColor: t.brand + "1A", // Fondo suave de marca
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -144,12 +148,12 @@ const styles = StyleSheet.create({
   recipeName: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1A1D20", // Texto oscuro carbón
+    color: t.textPrimary,
     marginBottom: 6,
   },
   costBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#E6F4EA", // Badge verde pastel
+    backgroundColor: t.success + "1F",
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -157,7 +161,7 @@ const styles = StyleSheet.create({
   costText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#137333", // Verde oscuro legible
+    color: t.success,
   },
   cardRight: {
     justifyContent: "center",

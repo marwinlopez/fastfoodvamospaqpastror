@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -17,31 +17,28 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import apis from "../apis";
-import { COLORS } from "../constants/themes";
-
-const DEFAULT_IMAGES = {
-  Hamburguesas: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500",
-  Papas: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500",
-  Bebidas: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500",
-};
+import ScreenHeader from "../components/ScreenHeader";
+import useTheme from "../hooks/useTheme";
 
 const MenuScreen = ({ navigation, route }) => {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [menuItems, setMenuItems] = useState([]);
-  const [categories, setCategories] = useState(["Hamburguesas", "Papas", "Bebidas"]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Form State
   const [editingId, setEditingId] = useState(null);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Hamburguesas");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [stock, setStock] = useState("");
   const [activeTab, setActiveTab] = useState("Menu");
 
   // Filter category state
-  const [filterCategory, setFilterCategory] = useState("Hamburguesas");
+  const [filterCategory, setFilterCategory] = useState("");
 
   const fetchCategories = async () => {
     try {
@@ -65,46 +62,7 @@ const MenuScreen = ({ navigation, route }) => {
       setLoading(true);
       const { data } = await apis.getMenuItems();
       if (data && data.success) {
-        let items = data.menu || [];
-        
-        // Si está vacía, creamos los platos por defecto del screenshot
-        if (items.length === 0) {
-          const defaultItems = [
-            {
-              name: "Cheeseburger Clásica",
-              price: 5.99,
-              description: "Hamburguesa clásica con queso fundido y vegetales frescos.",
-              category: "Hamburguesas",
-              imageUrl: DEFAULT_IMAGES.Hamburguesas,
-              stock: 24,
-            },
-            {
-              name: "Papas Grandes",
-              price: 3.50,
-              description: "Papas fritas crujientes doradas al punto perfecto.",
-              category: "Papas",
-              imageUrl: DEFAULT_IMAGES.Papas,
-              stock: 0,
-            },
-            {
-              name: "Refresco XL",
-              price: 2.25,
-              description: "Vaso gigante de gaseosa bien fría con limón.",
-              category: "Bebidas",
-              imageUrl: DEFAULT_IMAGES.Bebidas,
-              stock: 142,
-            }
-          ];
-          
-          for (const item of defaultItems) {
-            await apis.createMenuItem(item);
-          }
-          
-          const refreshRes = await apis.getMenuItems();
-          items = refreshRes.data.menu || [];
-        }
-        
-        setMenuItems(items);
+        setMenuItems(data.menu || []);
       }
     } catch (error) {
       console.log("Error fetching menu items:", error);
@@ -119,16 +77,16 @@ const MenuScreen = ({ navigation, route }) => {
     const loadData = async () => {
       await fetchCategories();
       await fetchMenuItems();
-      
+
       const passedItem = route.params?.item;
       if (passedItem) {
         setEditingId(passedItem.id || passedItem.menuId);
         setName(passedItem.name);
-        setPrice(passedItem.price.toString());
+        setPrice(Number(passedItem.price || 0).toFixed(2));
         setDescription(passedItem.description || "");
         setSelectedCategory(passedItem.category);
         setImageUrl(passedItem.imageUrl || "");
-        setStock(passedItem.stock !== undefined ? passedItem.stock.toString() : "0");
+        setStock(passedItem.stock !== undefined ? String(Number(passedItem.stock)) : "0");
       } else {
         setEditingId(null);
         setName("");
@@ -154,7 +112,7 @@ const MenuScreen = ({ navigation, route }) => {
       price: parseFloat(price),
       description: description.trim(),
       category: selectedCategory,
-      imageUrl: imageUrl || DEFAULT_IMAGES[selectedCategory] || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500",
+      imageUrl: imageUrl || "",
       stock: stock ? parseInt(stock) : 0,
     };
 
@@ -167,7 +125,7 @@ const MenuScreen = ({ navigation, route }) => {
         await apis.createMenuItem(payload);
         ToastAndroid.show("Platillo guardado", ToastAndroid.SHORT);
       }
-      
+
       // Reset form
       setName("");
       setPrice("");
@@ -175,7 +133,7 @@ const MenuScreen = ({ navigation, route }) => {
       setImageUrl("");
       setStock("");
       setEditingId(null);
-      
+
       navigation.navigate("ProductsSaleScreen");
     } catch (error) {
       console.log("Error saving menu item:", error);
@@ -188,11 +146,11 @@ const MenuScreen = ({ navigation, route }) => {
   const handleEdit = (item) => {
     setEditingId(item.id || item.menuId);
     setName(item.name);
-    setPrice(item.price.toString());
+    setPrice(Number(item.price || 0).toFixed(2));
     setDescription(item.description || "");
     setSelectedCategory(item.category);
     setImageUrl(item.imageUrl || "");
-    setStock(item.stock ? item.stock.toString() : "0");
+    setStock(item.stock ? String(Number(item.stock)) : "0");
     setFilterCategory(item.category);
     ToastAndroid.show("Editando platillo...", ToastAndroid.SHORT);
   };
@@ -226,43 +184,27 @@ const MenuScreen = ({ navigation, route }) => {
   };
 
   const toggleDemoImage = () => {
-    const keys = Object.keys(DEFAULT_IMAGES);
-    const nextIndex = (keys.indexOf(selectedCategory) + 1) % keys.length;
-    const nextCategory = keys[nextIndex >= 0 ? nextIndex : 0];
-    setImageUrl(DEFAULT_IMAGES[nextCategory] || DEFAULT_IMAGES.Hamburguesas);
-    ToastAndroid.show("Imagen del platillo cargada", ToastAndroid.SHORT);
+    ToastAndroid.show("Pega una URL de imagen en el campo correspondiente", ToastAndroid.SHORT);
   };
 
   const filteredItems = menuItems.filter(item => item.category === filterCategory);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <ScreenHeader
+        theme={theme}
+        onBack={() => navigation.navigate("ProductsSaleScreen")}
+        title="Crear Menú"
+        subtitle="Diseña los platillos y precios de tu carta."
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.navigate("ProductsSaleScreen")}
-            >
-              <Feather name="arrow-left" size={22} color={COLORS.default} />
-            </TouchableOpacity>
-            <View style={styles.headerTitleContainer}>
-              <Feather name="coffee" size={22} color={COLORS.default} style={styles.headerIcon} />
-              <Text style={[styles.headerTitle, { color: COLORS.default }]}>Crear Menú</Text>
-            </View>
-            <Image 
-              source={{ uri: "https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=100" }} 
-              style={styles.avatar} 
-            />
-          </View>
-
           {/* Categorías */}
           <Text style={styles.sectionLabelTitle}>CATEGORÍAS</Text>
           <View style={styles.categoriesContainer}>
@@ -274,7 +216,7 @@ const MenuScreen = ({ navigation, route }) => {
                     key={cat}
                     style={[
                       styles.categoryTab,
-                      isActive ? { backgroundColor: COLORS.default } : styles.categoryTabInactive
+                      isActive ? { backgroundColor: theme.brand } : styles.categoryTabInactive
                     ]}
                     onPress={() => {
                       setFilterCategory(cat);
@@ -297,7 +239,7 @@ const MenuScreen = ({ navigation, route }) => {
 
           {/* Formulario */}
           <View style={styles.formCard}>
-            <Text style={[styles.formTitle, { color: COLORS.default }]}>
+            <Text style={[styles.formTitle, { color: theme.brand }]}>
               {editingId ? "Editar Platillo" : "Nuevo Platillo"}
             </Text>
             <Text style={styles.formSubtitle}>
@@ -305,8 +247,8 @@ const MenuScreen = ({ navigation, route }) => {
             </Text>
 
             {/* Imagen Box */}
-            <TouchableOpacity 
-              style={[styles.imageUploadBox, { backgroundColor: `${COLORS.default}05`, borderColor: `${COLORS.default}40` }]} 
+            <TouchableOpacity
+              style={[styles.imageUploadBox, { backgroundColor: theme.brand + "0D", borderColor: theme.brand + "66" }]}
               activeOpacity={0.7}
               onPress={toggleDemoImage}
             >
@@ -321,7 +263,7 @@ const MenuScreen = ({ navigation, route }) => {
               ) : (
                 <View style={styles.imagePlaceholder}>
                   <View style={styles.cameraIconCircle}>
-                    <Feather name="camera" size={24} color={COLORS.default} />
+                    <Feather name="camera" size={24} color={theme.brand} />
                   </View>
                   <Text style={styles.uploadText}>Subir Imagen del Platillo</Text>
                 </View>
@@ -334,7 +276,7 @@ const MenuScreen = ({ navigation, route }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Ej. Signature Bacon Burger"
-                placeholderTextColor="#A3A3A3"
+                placeholderTextColor={theme.textSecondary}
                 value={name}
                 onChangeText={setName}
               />
@@ -345,7 +287,7 @@ const MenuScreen = ({ navigation, route }) => {
               <TextInput
                 style={styles.input}
                 placeholder="0.00"
-                placeholderTextColor="#A3A3A3"
+                placeholderTextColor={theme.textSecondary}
                 keyboardType="numeric"
                 value={price}
                 onChangeText={setPrice}
@@ -357,7 +299,7 @@ const MenuScreen = ({ navigation, route }) => {
               <TextInput
                 style={styles.input}
                 placeholder="0"
-                placeholderTextColor="#A3A3A3"
+                placeholderTextColor={theme.textSecondary}
                 keyboardType="numeric"
                 value={stock}
                 onChangeText={setStock}
@@ -369,7 +311,7 @@ const MenuScreen = ({ navigation, route }) => {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Describe los ingredientes y el sabor..."
-                placeholderTextColor="#A3A3A3"
+                placeholderTextColor={theme.textSecondary}
                 multiline={true}
                 numberOfLines={3}
                 value={description}
@@ -378,8 +320,8 @@ const MenuScreen = ({ navigation, route }) => {
             </View>
 
             {/* Guardar Button */}
-            <TouchableOpacity 
-              style={[styles.saveButton, { backgroundColor: COLORS.default }]} 
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: theme.brand }]}
               onPress={handleSave}
               activeOpacity={0.8}
             >
@@ -390,8 +332,8 @@ const MenuScreen = ({ navigation, route }) => {
             </TouchableOpacity>
 
             {editingId && (
-              <TouchableOpacity 
-                style={styles.cancelButton} 
+              <TouchableOpacity
+                style={styles.cancelButton}
                 onPress={() => {
                   setEditingId(null);
                   setName("");
@@ -408,37 +350,43 @@ const MenuScreen = ({ navigation, route }) => {
           {/* Menú Actual */}
           <View style={styles.menuListHeader}>
             <Text style={styles.menuSectionTitle}>MENÚ ACTUAL</Text>
-            <Text style={[styles.menuItemsCount, { color: COLORS.orange }]}>{filteredItems.length} Items</Text>
+            <Text style={[styles.menuItemsCount, { color: theme.warning }]}>{filteredItems.length} Items</Text>
           </View>
 
           {loading && menuItems.length === 0 ? (
-            <ActivityIndicator size="large" color={COLORS.default} style={{ marginVertical: 20 }} />
+            <ActivityIndicator size="large" color={theme.brand} style={{ marginVertical: 20 }} />
           ) : (
             <View style={styles.menuList}>
               {filteredItems.map((item) => (
                 <View key={item.id || item.menuId} style={styles.itemRow}>
-                  <Image source={{ uri: item.imageUrl || DEFAULT_IMAGES[filterCategory] || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500" }} style={styles.itemImage} />
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+                  ) : (
+                    <View style={[styles.itemImage, styles.itemImagePlaceholder]}>
+                      <Feather name="image" size={20} color={theme.textSecondary} />
+                    </View>
+                  )}
                   <View style={styles.itemTextContainer}>
                     <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={[styles.itemPrice, { color: COLORS.default }]}>${parseFloat(item.price).toFixed(2)}</Text>
+                    <Text style={[styles.itemPrice, { color: theme.brand }]}>${parseFloat(item.price).toFixed(2)}</Text>
                   </View>
                   <View style={styles.actionsWrapper}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.editIconButton}
                       onPress={() => handleEdit(item)}
                     >
-                      <Feather name="edit-2" size={18} color="#6C757D" />
+                      <Feather name="edit-2" size={18} color={theme.textSecondary} />
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.deleteIconButton}
                       onPress={() => handleDelete(item)}
                     >
-                      <Feather name="trash-2" size={18} color="#D32F2F" />
+                      <Feather name="trash-2" size={18} color={theme.danger} />
                     </TouchableOpacity>
                   </View>
                 </View>
               ))}
-              
+
               {filteredItems.length === 0 && (
                 <Text style={styles.emptyText}>No hay platillos en esta categoría</Text>
               )}
@@ -449,41 +397,41 @@ const MenuScreen = ({ navigation, route }) => {
 
       {/* Footer Navigation */}
       <View style={styles.footer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => navigation.navigate("HomeScreen")}
         >
-          <Feather name="home" size={20} color="#8E9AA6" />
+          <Feather name="home" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Inicio</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => {
             setActiveTab("Orders");
             ToastAndroid.show("Pedidos estará disponible pronto", ToastAndroid.SHORT);
           }}
         >
-          <Feather name="shopping-bag" size={20} color="#8E9AA6" />
+          <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Órdenes</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => setActiveTab("Menu")}
         >
-          <Feather name="book-open" size={20} color={COLORS.default} />
-          <Text style={[styles.footerTabText, { color: COLORS.default }]}>Menú</Text>
+          <Feather name="book-open" size={20} color={theme.brand} />
+          <Text style={[styles.footerTabText, { color: theme.brand }]}>Menú</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => {
             setActiveTab("Settings");
             navigation.navigate("ProductsSaleScreen");
           }}
         >
-          <Feather name="settings" size={20} color="#8E9AA6" />
+          <Feather name="settings" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Ajustes</Text>
         </TouchableOpacity>
       </View>
@@ -491,57 +439,20 @@ const MenuScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: t.background,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 15,
+    paddingTop: 8,
     paddingBottom: 100, // Espacio para el footer
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: "#FFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  headerTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  headerIcon: {
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: "#FFF",
   },
   sectionLabelTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#6C757D",
+    color: t.textSecondary,
     letterSpacing: 1.5,
     marginBottom: 10,
   },
@@ -555,14 +466,14 @@ const styles = StyleSheet.create({
     marginRight: 10,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 4,
     elevation: 1,
   },
   categoryTabInactive: {
-    backgroundColor: "#E0E0E0",
+    backgroundColor: t.inputBg,
   },
   categoryText: {
     fontSize: 14,
@@ -572,16 +483,16 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   categoryTextInactive: {
-    color: "#5C6B73",
+    color: t.textSecondary,
   },
   formCard: {
-    backgroundColor: "#FFF",
+    backgroundColor: t.surface,
     borderRadius: 24,
     padding: 20,
     marginBottom: 25,
-    shadowColor: "#1A1D20",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 16,
     elevation: 3,
   },
@@ -592,7 +503,7 @@ const styles = StyleSheet.create({
   },
   formSubtitle: {
     fontSize: 12,
-    color: "#8E9AA6",
+    color: t.textSecondary,
     marginBottom: 16,
     lineHeight: 16,
   },
@@ -636,20 +547,20 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#FFF",
+    backgroundColor: t.surface,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
-    shadowColor: "#000",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 4,
     elevation: 1,
   },
   uploadText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#6C757D",
+    color: t.textSecondary,
   },
   inputGroup: {
     marginBottom: 15,
@@ -657,19 +568,19 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1A1D20",
+    color: t.textPrimary,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: "#F7F8FA",
+    backgroundColor: t.inputBg,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
-    color: "#1A1D20",
+    color: t.textPrimary,
     fontWeight: "600",
     borderWidth: 1,
-    borderColor: "#EAEAEA",
+    borderColor: t.border,
   },
   textArea: {
     height: 80,
@@ -702,7 +613,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   cancelButtonText: {
-    color: "#8E9AA6",
+    color: t.textSecondary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -715,7 +626,7 @@ const styles = StyleSheet.create({
   menuSectionTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#6C757D",
+    color: t.textSecondary,
     letterSpacing: 1.5,
   },
   menuItemsCount: {
@@ -727,14 +638,14 @@ const styles = StyleSheet.create({
   },
   itemRow: {
     flexDirection: "row",
-    backgroundColor: "#FFF",
+    backgroundColor: t.surface,
     borderRadius: 18,
     padding: 12,
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 4,
     elevation: 1,
   },
@@ -742,7 +653,11 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 12,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: t.inputBg,
+  },
+  itemImagePlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   itemTextContainer: {
     flex: 1,
@@ -751,7 +666,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1A1D20",
+    color: t.textPrimary,
     marginBottom: 4,
   },
   itemPrice: {
@@ -765,17 +680,17 @@ const styles = StyleSheet.create({
   editIconButton: {
     padding: 8,
     borderRadius: 10,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: t.inputBg,
     marginRight: 6,
   },
   deleteIconButton: {
     padding: 8,
     borderRadius: 10,
-    backgroundColor: "#FFF0F0",
+    backgroundColor: t.danger + "1A",
   },
   emptyText: {
     textAlign: "center",
-    color: "#8E9AA6",
+    color: t.textSecondary,
     fontSize: 14,
     fontWeight: "600",
     marginVertical: 20,
@@ -786,10 +701,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 64,
-    backgroundColor: "#FFF",
+    backgroundColor: t.headerBg,
     flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: "#ECEFF1",
+    borderTopColor: t.border,
     justifyContent: "space-around",
     alignItems: "center",
     paddingBottom: Platform.OS === "ios" ? 15 : 0,
@@ -804,7 +719,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     marginTop: 4,
-    color: "#8E9AA6",
+    color: t.textSecondary,
   },
 });
 

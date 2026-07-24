@@ -1,107 +1,108 @@
-import React from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Image,
   ToastAndroid,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
-import { COLORS } from "../constants/themes";
+import useGlobal from "../hooks/useGlobal";
+import useTheme from "../hooks/useTheme";
+import apis from "../apis";
+
+const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const MONTHS = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
 
 const HomeScreens = ({ navigation }) => {
-  const metrics = [
-    {
-      id: 1,
-      title: "Ventas Hoy",
-      value: "$1,450.00",
-      icon: "dollar-sign",
-      color: COLORS.default,
-    },
-    {
-      id: 2,
-      title: "Pedidos Totales",
-      value: "124",
-      icon: "shopping-bag",
-      color: "#F4511E",
-    },
-    {
-      id: 3,
-      title: "Tiempo Promedio",
-      value: "14 min",
-      icon: "clock",
-      color: "#059669",
-    },
-  ];
+  const { user, company } = useGlobal();
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const [stats, setStats] = useState({ products: null, recipes: null, menu: null });
+
+  const now = new Date();
+  const dateText = `${DAYS[now.getDay()]}, ${now.getDate()} de ${MONTHS[now.getMonth()]}`;
+
+  const fetchStats = async () => {
+    try {
+      const [prodRes, recRes, menuRes] = await Promise.allSettled([
+        apis.allProducts(),
+        apis.recipeAll(),
+        apis.getMenuItems(),
+      ]);
+      const count = (res, keys) => {
+        if (res.status !== "fulfilled") return null;
+        const data = res.value?.data;
+        for (const k of keys) {
+          if (Array.isArray(data?.[k])) return data[k].length;
+        }
+        return Array.isArray(data) ? data.length : null;
+      };
+      setStats({
+        products: count(prodRes, ["data", "products"]),
+        recipes: count(recRes, ["recipes"]),
+        menu: count(menuRes, ["menu", "menuItems", "items", "data"]),
+      });
+    } catch (error) {
+      console.log("[HomeScreens] Error cargando resumen:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+    const unsubscribe = navigation.addListener("focus", fetchStats);
+    return unsubscribe;
+  }, [navigation]);
 
   const quickActions = [
     {
       id: 1,
       title: "Gestionar Menú",
+      description: "Platillos y precios",
       icon: "book-open",
-      color: COLORS.default,
+      color: "#5802F1",
+      bg: "#F1EAFE",
       url: "ProductsSaleScreen",
     },
     {
       id: 2,
       title: "Ver Recetas",
+      description: "Costos y preparación",
       icon: "list",
-      color: COLORS.default,
+      color: "#059669",
+      bg: "#E2F6EF",
       url: "RecipesScreen",
     },
     {
       id: 3,
       title: "Inventario",
+      description: "Stock y reposición",
       icon: "package",
-      color: COLORS.default,
+      color: "#D97706",
+      bg: "#FDF0DC",
       url: "MaterialsScreen",
     },
     {
       id: 4,
       title: "Personal",
+      description: "Equipo y accesos",
       icon: "users",
-      color: COLORS.default,
+      color: "#DB2777",
+      bg: "#FCE7F0",
       url: "StaffSettingsScreen",
     },
   ];
 
-  const recentOrders = [
-    {
-      id: 1,
-      orderNum: "#2481",
-      name: "Combo Bacon",
-      time: "Hace 2 min",
-      table: "Mesa 4",
-      status: "Preparando",
-      statusColor: "#E28743",
-      statusBg: "#FFF3E0",
-      image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100",
-    },
-    {
-      id: 2,
-      orderNum: "#2480",
-      name: "Ensalada Mediterránea",
-      time: "Hace 8 min",
-      table: "Delivery",
-      status: "Listo",
-      statusColor: "#059669",
-      statusBg: "#E6F4EA",
-      image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=100",
-    },
-    {
-      id: 3,
-      orderNum: "#2479",
-      name: "Pasta Pomodoro",
-      time: "Hace 15 min",
-      table: "Mesa 12",
-      status: "Entregado",
-      statusColor: "#6C757D",
-      statusBg: "#F1F3F4",
-      image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=100",
-    },
+  const statItems = [
+    { label: "Inventario", value: stats.products, icon: "package" },
+    { label: "Recetas", value: stats.recipes, icon: "list" },
+    { label: "Menú", value: stats.menu, icon: "book-open" },
   ];
 
   return (
@@ -113,75 +114,61 @@ const HomeScreens = ({ navigation }) => {
         {/* Header Superior */}
         <View style={styles.topHeader}>
           <View style={styles.brandContainer}>
-            <View style={[styles.logoCircle, { backgroundColor: COLORS.default }]}>
-              <Feather name="coffee" size={18} color="#FFFFFF" />
+            <View style={styles.logoBadge}>
+              <Text style={styles.logoBadgeText}>V</Text>
+              <View style={styles.logoBadgeDot} />
             </View>
-            <Text style={[styles.brandTitle, { color: COLORS.default }]}>PA Q' PASTOR</Text>
+            <Text
+              style={[styles.brandTitle, { color: theme.brand }]}
+              numberOfLines={1}
+            >
+              {(company?.name || "PA Q' PASTOR").toUpperCase()}
+            </Text>
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.notificationBtn}
-              onPress={() => ToastAndroid.show("No tienes notificaciones nuevas", ToastAndroid.SHORT)}
+              onPress={() =>
+                ToastAndroid.show("No tienes notificaciones nuevas", ToastAndroid.SHORT)
+              }
             >
-              <Feather name="bell" size={20} color="#1A1D20" />
-              <View style={[styles.notificationDot, { backgroundColor: COLORS.default }]} />
+              <Feather name="bell" size={20} color={theme.textPrimary} />
             </TouchableOpacity>
-            <Image
-              source={{ uri: "https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=100" }}
-              style={styles.profileAvatar}
-            />
+            <View style={styles.profileAvatar}>
+              <Feather name="user" size={18} color={theme.textSecondary} />
+            </View>
           </View>
         </View>
 
-        {/* Bienvenida */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>¡Hola, Chef!</Text>
-          <Text style={styles.welcomeSubtitle}>
-            La cocina está en marcha. Aquí está el resumen de hoy.
+        {/* Hero de bienvenida */}
+        <LinearGradient
+          colors={["#7C3AED", "#5802F1", "#3B0091"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroCircleLarge} />
+          <View style={styles.heroCircleSmall} />
+          <Text style={styles.heroDate}>{dateText}</Text>
+          <Text style={styles.heroTitle}>¡Hola, {user?.name || "Usuario"}! 👋</Text>
+          <Text style={styles.heroSubtitle}>
+            Administra tu cocina desde un solo lugar.
           </Text>
-        </View>
 
-        {/* Métricas Diarias */}
-        <View style={styles.metricsContainer}>
-          {metrics.map((metric) => (
-            <View key={metric.id} style={styles.metricCard}>
-              <View style={[styles.metricIconWrapper, { backgroundColor: `${metric.color}12` }]}>
-                <Feather name={metric.icon} size={22} color={metric.color} />
+          {/* Resumen con datos reales */}
+          <View style={styles.statsRow}>
+            {statItems.map((s) => (
+              <View key={s.label} style={styles.statChip}>
+                <Feather name={s.icon} size={14} color="#E9DDFF" />
+                <Text style={styles.statValue}>{s.value !== null ? s.value : "—"}</Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
               </View>
-              <View style={styles.metricTextWrapper}>
-                <Text style={styles.metricTitle}>{metric.title}</Text>
-                <Text style={styles.metricValue}>{metric.value}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        </LinearGradient>
 
-        {/* Capacidad de Cocina */}
-        <View style={styles.capacityCard}>
-          <View style={styles.capacityHeader}>
-            <Text style={styles.capacityTitle}>CAPACIDAD DE COCINA</Text>
-            <View style={[styles.liveBadge, { backgroundColor: `${COLORS.default}15` }]}>
-              <Text style={[styles.liveText, { color: COLORS.default }]}>En Vivo</Text>
-            </View>
-          </View>
-          <View style={styles.demandRow}>
-            <View style={[styles.demandBadge, { backgroundColor: `${COLORS.orange}15` }]}>
-              <Text style={[styles.demandText, { color: COLORS.orange }]}>ALTA DEMANDA</Text>
-            </View>
-            <Text style={[styles.demandPercent, { color: COLORS.orange }]}>82%</Text>
-          </View>
-          
-          {/* Progress Bar */}
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: "82%", backgroundColor: COLORS.default }]} />
-          </View>
-          
-          <Text style={styles.capacitySubtext}>
-            6 fogones activos de 8 disponibles.
-          </Text>
-        </View>
-
-        {/* Cuadrícula de Acciones Rápidas */}
+        {/* Accesos rápidos */}
+        <Text style={styles.sectionTitle}>Accesos Rápidos</Text>
         <View style={styles.gridContainer}>
           {quickActions.map((action) => (
             <TouchableOpacity
@@ -189,41 +176,18 @@ const HomeScreens = ({ navigation }) => {
               style={styles.actionCard}
               activeOpacity={0.7}
               onPress={() => {
-                if (action.url === "StaffScreen") {
-                  alert("Esta sección estará disponible próximamente.");
-                } else {
-                  navigation.navigate(action.url, { recipe: null, item: null });
-                }
+                navigation.navigate(action.url, { recipe: null, item: null });
               }}
             >
-              <View style={[styles.actionIconWrapper, { backgroundColor: `${COLORS.default}08` }]}>
-                <Feather name={action.icon} size={24} color={COLORS.default} />
+              <View style={[styles.actionIconWrapper, { backgroundColor: action.bg }]}>
+                <Feather name={action.icon} size={20} color={action.color} />
               </View>
               <Text style={styles.actionCardText}>{action.title}</Text>
+              <Text style={styles.actionCardDescription}>{action.description}</Text>
+              <View style={styles.actionArrow}>
+                <Feather name="arrow-up-right" size={14} color={theme.textSecondary} />
+              </View>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Últimos Pedidos */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Últimos Pedidos</Text>
-          <TouchableOpacity onPress={() => ToastAndroid.show("Pedidos estará disponible próximamente", ToastAndroid.SHORT)}>
-            <Text style={[styles.viewAllText, { color: COLORS.default }]}>Ver todos</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.ordersList}>
-          {recentOrders.map((order) => (
-            <View key={order.id} style={styles.orderCard}>
-              <Image source={{ uri: order.image }} style={styles.orderImage} />
-              <View style={styles.orderTextContainer}>
-                <Text style={styles.orderTitle}>{order.orderNum} - {order.name}</Text>
-                <Text style={styles.orderSubtext}>{order.time} • {order.table}</Text>
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: order.statusBg }]}>
-                <Text style={[styles.statusText, { color: order.statusColor }]}>{order.status}</Text>
-              </View>
-            </View>
           ))}
         </View>
       </ScrollView>
@@ -231,31 +195,31 @@ const HomeScreens = ({ navigation }) => {
       {/* Footer Navigation */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerTab}>
-          <Feather name="home" size={20} color={COLORS.default} />
-          <Text style={[styles.footerTabText, { color: COLORS.default }]}>Inicio</Text>
+          <Feather name="home" size={20} color={theme.brand} />
+          <Text style={[styles.footerTabText, { color: theme.brand }]}>Inicio</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => ToastAndroid.show("Pedidos estará disponible pronto", ToastAndroid.SHORT)}
         >
-          <Feather name="shopping-bag" size={20} color="#8E9AA6" />
+          <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Órdenes</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => navigation.navigate("ProductsSaleScreen")}
         >
-          <Feather name="book-open" size={20} color="#8E9AA6" />
+          <Feather name="book-open" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Menú</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => navigation.navigate("SettingsScreen")}
         >
-          <Feather name="settings" size={20} color="#8E9AA6" />
+          <Feather name="settings" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Ajustes</Text>
         </TouchableOpacity>
       </View>
@@ -263,36 +227,51 @@ const HomeScreens = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: t.background,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 15,
+    paddingTop: 12,
     paddingBottom: 90, // Margen para el footer
   },
   topHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 25,
+    marginBottom: 18,
   },
   brandContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-  logoCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  logoBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: t.brand,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginRight: 10,
+  },
+  logoBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  logoBadgeDot: {
+    position: "absolute",
+    top: 5,
+    right: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#F97316",
   },
   brandTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
@@ -302,243 +281,134 @@ const styles = StyleSheet.create({
   },
   notificationBtn: {
     padding: 8,
-    marginRight: 10,
-    position: "relative",
-  },
-  notificationDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    position: "absolute",
-    top: 6,
-    right: 8,
+    marginRight: 8,
   },
   profileAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: "#EAEAEA",
-  },
-  welcomeSection: {
-    marginBottom: 20,
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#1A1D20",
-    marginBottom: 4,
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: "#6C757D",
-    lineHeight: 18,
-  },
-  metricsContainer: {
-    marginBottom: 20,
-  },
-  metricCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  metricIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    borderColor: t.border,
+    backgroundColor: t.inputBg,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
   },
-  metricTextWrapper: {
-    flex: 1,
-  },
-  metricTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#8E9AA6",
-    marginBottom: 2,
-  },
-  metricValue: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1A1D20",
-  },
-  capacityCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+  heroCard: {
+    borderRadius: 24,
     padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  capacityHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  capacityTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#1A1D20",
-    letterSpacing: 1,
-  },
-  liveBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  liveText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  demandRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  demandBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  demandText: {
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  demandPercent: {
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  progressBarBg: {
-    height: 8,
-    backgroundColor: "#EAEAEA",
-    borderRadius: 4,
+    marginBottom: 24,
     overflow: "hidden",
-    marginBottom: 12,
   },
-  progressBarFill: {
-    height: "100%",
-    borderRadius: 4,
+  heroCircleLarge: {
+    position: "absolute",
+    top: -70,
+    right: -60,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-  capacitySubtext: {
+  heroCircleSmall: {
+    position: "absolute",
+    bottom: -50,
+    left: -35,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  heroDate: {
+    color: "#D9C9FF",
     fontSize: 12,
-    fontStyle: "italic",
-    color: "#6C757D",
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  heroTitle: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    color: "#E4D9FF",
+    fontSize: 13,
+    fontWeight: "500",
+    marginBottom: 16,
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  statChip: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 14,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginHorizontal: 3,
+  },
+  statValue: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+  statLabel: {
+    color: "#D9C9FF",
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: t.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    marginBottom: 12,
   },
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 25,
   },
   actionCard: {
-    width: "48%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    width: "48.5%",
+    backgroundColor: t.surface,
+    borderRadius: 18,
     padding: 16,
-    alignItems: "center",
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
-    shadowColor: "#000",
+    borderColor: t.border,
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 8,
     elevation: 2,
   },
   actionIconWrapper: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   actionCardText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1A1D20",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1A1D20",
-  },
-  viewAllText: {
     fontSize: 14,
     fontWeight: "700",
-  },
-  ordersList: {
-    marginBottom: 10,
-  },
-  orderCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.01,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  orderImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: "#F0F0F0",
-  },
-  orderTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: "center",
-  },
-  orderTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1A1D20",
+    color: t.textPrimary,
     marginBottom: 2,
   },
-  orderSubtext: {
+  actionCardDescription: {
     fontSize: 11,
-    color: "#6C757D",
+    color: t.textSecondary,
+    fontWeight: "600",
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: "700",
+  actionArrow: {
+    position: "absolute",
+    top: 14,
+    right: 14,
   },
   footer: {
     position: "absolute",
@@ -546,10 +416,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 64,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: t.headerBg,
     flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: "#EAEAEA",
+    borderTopColor: t.border,
     justifyContent: "space-around",
     alignItems: "center",
   },
@@ -563,7 +433,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     marginTop: 4,
-    color: "#8E9AA6",
+    color: t.textSecondary,
   },
 });
 

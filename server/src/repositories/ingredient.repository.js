@@ -12,6 +12,15 @@ class IngredientRepository extends BaseRepository {
     );
     return rows.map(item => this.mapCustomId(item));
   }
+
+  // Ingredientes de otras recetas que usan esta receta como sub-receta
+  async getBySubRecipeId(subRecipeId) {
+    const rows = await this.query(
+      `SELECT * FROM "${this.tableName}" WHERE ${this.col("subRecipeId")} = $1`,
+      [subRecipeId]
+    );
+    return rows.map(item => this.mapCustomId(item));
+  }
 }
 
 module.exports = new IngredientRepository();

@@ -6,6 +6,8 @@
 export const lightTheme = {
   background: "#FAFAFA",
   surface: "#FFFFFF",
+  inputBg: "#F7F8FA",
+  headerBg: "#FFFFFF",
   textPrimary: "#1A1D20",
   textSecondary: "#8E9AA6",
   border: "#F0F0F0",
@@ -20,6 +22,8 @@ export const lightTheme = {
 export const darkTheme = {
   background: "#121212",
   surface: "#1E1E1E",
+  inputBg: "#2A2A2E",
+  headerBg: "#1A1A1D",
   textPrimary: "#F5F5F7",
   textSecondary: "#A0A8B4",
   border: "#2A2D31",

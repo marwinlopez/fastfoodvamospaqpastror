@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -8,15 +8,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { COLORS } from "../constants/themes";
+import ScreenHeader from "../components/ScreenHeader";
 import useGlobal from "../hooks/useGlobal";
+import useTheme from "../hooks/useTheme";
 import { actionCreators } from "../hooks/GlobalReducer";
 import AuthService from "../services/AuthService";
 
-const DANGER = "#FF3B30";
-
 const SettingsScreen = ({ navigation }) => {
   const { dispatch } = useGlobal();
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const handleLogout = async () => {
     await AuthService.logout();
@@ -24,6 +25,13 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   const options = [
+    {
+      id: 0,
+      title: "Mi Empresa",
+      description: "Nombre, moneda, apariencia y datos del negocio",
+      icon: "briefcase",
+      url: "CompanySettingsScreen",
+    },
     {
       id: 1,
       title: "Categorías del Menú",
@@ -56,31 +64,17 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <ScrollView 
+      <ScreenHeader
+        theme={theme}
+        onBack={() => navigation.navigate("HomeScreen")}
+        title="Ajustes"
+        subtitle="Configura y personaliza las bases de datos de soporte del sistema."
+      />
+
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.navigate("HomeScreen")}
-          >
-            <Feather name="arrow-left" size={22} color={COLORS.default} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Feather name="settings" size={22} color={COLORS.default} style={styles.headerIcon} />
-            <Text style={[styles.headerTitle, { color: COLORS.default }]}>Ajustes</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>Panel de Mantenimiento</Text>
-          <Text style={styles.infoSubtitle}>
-            Configura y personaliza las bases de datos de soporte del sistema.
-          </Text>
-        </View>
-
         {/* Options List */}
         <View style={styles.listContainer}>
           {options.map((opt) => (
@@ -90,14 +84,14 @@ const SettingsScreen = ({ navigation }) => {
               activeOpacity={0.7}
               onPress={() => navigation.navigate(opt.url)}
             >
-              <View style={[styles.iconWrapper, { backgroundColor: `${COLORS.default}08` }]}>
-                <Feather name={opt.icon} size={22} color={COLORS.default} />
+              <View style={[styles.iconWrapper, { backgroundColor: theme.brand + "14" }]}>
+                <Feather name={opt.icon} size={22} color={theme.brand} />
               </View>
               <View style={styles.textWrapper}>
                 <Text style={styles.optionTitle}>{opt.title}</Text>
                 <Text style={styles.optionDescription}>{opt.description}</Text>
               </View>
-              <Feather name="chevron-right" size={20} color="#8E9AA6" />
+              <Feather name="chevron-right" size={20} color={theme.textSecondary} />
             </TouchableOpacity>
           ))}
 
@@ -106,11 +100,11 @@ const SettingsScreen = ({ navigation }) => {
             activeOpacity={0.7}
             onPress={handleLogout}
           >
-            <View style={[styles.iconWrapper, { backgroundColor: `${DANGER}10` }]}>
-              <Feather name="log-out" size={22} color={DANGER} />
+            <View style={[styles.iconWrapper, { backgroundColor: theme.danger + "1A" }]}>
+              <Feather name="log-out" size={22} color={theme.danger} />
             </View>
             <View style={styles.textWrapper}>
-              <Text style={[styles.optionTitle, { color: DANGER }]}>Cerrar sesión</Text>
+              <Text style={[styles.optionTitle, { color: theme.danger }]}>Cerrar sesión</Text>
               <Text style={styles.optionDescription}>Salir de tu cuenta en este dispositivo</Text>
             </View>
           </TouchableOpacity>
@@ -119,108 +113,64 @@ const SettingsScreen = ({ navigation }) => {
 
       {/* Footer Navigation */}
       <View style={styles.footer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => navigation.navigate("HomeScreen")}
         >
-          <Feather name="home" size={20} color="#8E9AA6" />
+          <Feather name="home" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Inicio</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => alert("Pedidos estará disponible pronto.")}
         >
-          <Feather name="shopping-bag" size={20} color="#8E9AA6" />
+          <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Órdenes</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerTab}
           onPress={() => navigation.navigate("MenuScreen")}
         >
-          <Feather name="book-open" size={20} color="#8E9AA6" />
+          <Feather name="book-open" size={20} color={theme.textSecondary} />
           <Text style={styles.footerTabText}>Menú</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.footerTab}>
-          <Feather name="settings" size={20} color={COLORS.default} />
-          <Text style={[styles.footerTabText, { color: COLORS.default }]}>Ajustes</Text>
+          <Feather name="settings" size={20} color={theme.brand} />
+          <Text style={[styles.footerTabText, { color: theme.brand }]}>Ajustes</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: t.background,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 15,
+    paddingTop: 8,
     paddingBottom: 90,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 25,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: "#FFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  headerTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    justifyContent: "center",
-    marginRight: 40, // Balancear el botón de atrás
-  },
-  headerIcon: {
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  infoSection: {
-    marginBottom: 25,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#1A1D20",
-    marginBottom: 4,
-  },
-  infoSubtitle: {
-    fontSize: 13,
-    color: "#6C757D",
-    lineHeight: 18,
   },
   listContainer: {
     marginBottom: 20,
   },
   optionCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: t.surface,
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
-    shadowColor: "#000",
+    borderColor: t.border,
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -241,12 +191,12 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1A1D20",
+    color: t.textPrimary,
     marginBottom: 2,
   },
   optionDescription: {
     fontSize: 11,
-    color: "#8E9AA6",
+    color: t.textSecondary,
   },
   footer: {
     position: "absolute",
@@ -254,10 +204,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 64,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: t.headerBg,
     flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: "#EAEAEA",
+    borderTopColor: t.border,
     justifyContent: "space-around",
     alignItems: "center",
   },
@@ -271,7 +221,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     marginTop: 4,
-    color: "#8E9AA6",
+    color: t.textSecondary,
   },
 });
 

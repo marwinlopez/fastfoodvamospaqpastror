@@ -1,21 +1,22 @@
-import React, { useEffect, useReducer } from "react";
+import React, { useEffect, useReducer, useMemo } from "react";
 import {
   ActivityIndicator,
   View,
   StyleSheet,
-  StatusBar,
   Alert,
   ToastAndroid,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "../components/Header";
-import { COLORS } from "../constants/themes";
 import { FAB } from "@rneui/themed";
 import RecipesReducer, { actionCreators, initialState } from "../hooks/RecipesReducer";
 import apis from "../apis";
 import ItemsRecipes from "../components/ItemsRecipes";
+import ScreenHeader from "../components/ScreenHeader";
+import useTheme from "../hooks/useTheme";
 
 const RecipesScreens = ({ navigation, route }) => {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [state, dispatch] = useReducer(RecipesReducer, initialState);
   const { isSelectionMode, recipe: parentRecipe } = route.params || {};
   const { loading, error, recipes } = state;
@@ -40,14 +41,27 @@ const RecipesScreens = ({ navigation, route }) => {
   };
 
   useEffect(() => {
-    fetchRecipes(); // Llamado inicial al montar
+    fetchRecipes();
     const unsubscribe = navigation.addListener("focus", fetchRecipes);
     return unsubscribe;
   }, [navigation]);
 
+  const redirectActionLeft = () => {
+    if (isSelectionMode && parentRecipe) {
+      // Volver al detalle de la receta desde la que se abrió el selector
+      const recipeId = parentRecipe.recipeId ?? parentRecipe.id;
+      if (recipeId && recipeId !== 0 && recipeId !== "0") {
+        navigation.push("RecipeScreen", { route: "materialsAdd", recipeId });
+      } else {
+        navigation.push("RecipeScreen", { route: "newRecipe", recipe: parentRecipe });
+      }
+    } else {
+      navigation.navigate("HomeScreen");
+    }
+  };
+
   const editRecipe = (action, route, recipe) => {
     if (isSelectionMode && parentRecipe) {
-      // Estamos añadiendo esta receta (recipe) como sub-receta a la receta padre (parentRecipe)
       navigation.push("MaterialScreen", {
         route: "addMaterial",
         recipe: parentRecipe,
@@ -91,23 +105,25 @@ const RecipesScreens = ({ navigation, route }) => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={COLORS.default} />
+        <ActivityIndicator size="large" color={theme.brand} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
-
-      <Header
-        title={"Recetas"}
-        buttonLeft={"arrow-left"}
-        actionLeft={() => navigation.navigate("HomeScreen")}
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <ScreenHeader
+        theme={theme}
+        onBack={redirectActionLeft}
+        title={isSelectionMode ? "Seleccionar Sub-Receta" : "Recetas"}
+        subtitle={
+          isSelectionMode
+            ? "Elige una receta existente para agregarla como ingrediente."
+            : "Crea y administra las recetas de tu cocina."
+        }
       />
 
       <View style={styles.content}>
-        {/* Aquí tus recetas flotan sin bordes rígidos */}
         <ItemsRecipes
           recipes={recipes}
           edit={editRecipe}
@@ -123,33 +139,32 @@ const RecipesScreens = ({ navigation, route }) => {
         placement="right"
         title={"Nueva Receta"}
         icon={{ name: "add", color: "white" }}
-        color={COLORS.default}
+        color={theme.brand}
         buttonStyle={styles.fabStyle}
       />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA", // Fondo Canvas (Blanco roto/Gris claro)
+    backgroundColor: t.background,
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: t.background,
   },
   content: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 10,
   },
   fabStyle: {
-    borderRadius: 16, // Estilo Canvas: Bordes redondeados
+    borderRadius: 16,
     paddingHorizontal: 20,
-    elevation: 4, // Sombra suave para que flote
+    elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

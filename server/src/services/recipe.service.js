@@ -26,17 +26,41 @@ class RecipeService {
   }
 
   async updateRecipe(id, updateData) {
-    const { name, merma } = updateData;
+    const { name, merma, labor } = updateData;
     const fieldsToUpdate = {};
     if (name !== undefined) fieldsToUpdate.name = name;
     if (merma !== undefined) fieldsToUpdate.merma = parseFloat(merma);
+    if (labor !== undefined) {
+      fieldsToUpdate.labor = JSON.stringify(this.sanitizeLabor(labor));
+    }
 
     const updated = await recipeRepository.update(id, fieldsToUpdate);
 
-    if (merma !== undefined) {
+    if (merma !== undefined || labor !== undefined) {
       await this.recalculateRecipeTotals(id);
     }
     return updated;
+  }
+
+  // Normaliza el arreglo de mano de obra: [{role, hourlyRate, hours}]
+  sanitizeLabor(labor) {
+    if (!Array.isArray(labor)) return [];
+    return labor
+      .map((l) => ({
+        role: (l.role || "").toString().trim(),
+        hourlyRate: parseFloat(l.hourlyRate) || 0,
+        hours: parseFloat(l.hours) || 0,
+      }))
+      .filter((l) => l.role !== "" && l.hourlyRate > 0 && l.hours > 0);
+  }
+
+  // Costo mano de obra = Σ (hourlyRate × hours)
+  calculateLaborCost(labor) {
+    const list = Array.isArray(labor) ? labor : [];
+    return list.reduce(
+      (sum, l) => sum + (parseFloat(l.hourlyRate) || 0) * (parseFloat(l.hours) || 0),
+      0
+    );
   }
 
   async deleteRecipe(id) {
@@ -78,12 +102,28 @@ class RecipeService {
     return totalWeightGrams;
   }
 
-  async recalculateRecipeTotals(recipeId) {
+  async recalculateRecipeTotals(recipeId, visited = new Set()) {
+    // Protección contra ciclos entre sub-recetas
+    if (visited.has(recipeId)) return;
+    visited.add(recipeId);
+
+    const recipe = await recipeRepository.getById(recipeId);
+    if (!recipe) return;
+
+    // 1. Costo de insumos (ingredientes + sub-recetas)
     const ingredients = await ingredientRepository.getByRecipeId(recipeId);
-    let totalCost = 0;
+    let insumosCost = 0;
     ingredients.forEach((d) => {
-      totalCost += parseFloat(d.cost || 0);
+      insumosCost += parseFloat(d.cost || 0);
     });
+
+    // 2. Costo de mano de obra = Σ (hourlyRate × hours)
+    const laborCost = this.calculateLaborCost(recipe.labor);
+
+    // 3. Costo base + ajuste por merma: costoTotal = base / (1 - M/100)
+    const costBase = insumosCost + laborCost;
+    const merma = Math.min(Math.max(parseFloat(recipe.merma) || 0, 0), 99);
+    const totalCost = merma > 0 ? costBase / (1 - merma / 100) : costBase;
 
     const totalWeight = await this.calculateTotalWeight(recipeId);
 
@@ -98,7 +138,34 @@ class RecipeService {
       weight: totalWeight,
     });
 
-    return { totalCost, totalWeight, updatedRecipe };
+    // 4. Cascada: recetas padre que usan esta receta como sub-receta
+    //    deben recalcular el costo de su ingrediente y sus totales.
+    const dependents = await ingredientRepository.getBySubRecipeId(recipeId);
+    for (const ing of dependents) {
+      const qty = parseFloat(ing.quantityUnitOfMeasurement || ing.quantity || 0);
+      const unit = (ing.unitOfMeasurement || "").toLowerCase();
+
+      let qtyInGrams;
+      if (["gramos", "g", "gr", "mililitros", "ml"].includes(unit)) {
+        qtyInGrams = qty;
+      } else if (["kilogramos", "kg", "kilos", "litros", "l"].includes(unit)) {
+        qtyInGrams = qty * 1000;
+      } else if (["libras", "lb", "lbs"].includes(unit)) {
+        qtyInGrams = qty * 453.592;
+      } else {
+        qtyInGrams = (totalWeight || 1) * qty;
+      }
+
+      const costPerGram = totalCost / (totalWeight || 1);
+      const newIngCost = costPerGram * qtyInGrams;
+
+      await ingredientRepository.update(ing.idIngredient || ing.id, {
+        cost: newIngCost,
+      });
+      await this.recalculateRecipeTotals(ing.recipeId, visited);
+    }
+
+    return { totalCost, insumosCost, laborCost, totalWeight, updatedRecipe };
   }
 }
 

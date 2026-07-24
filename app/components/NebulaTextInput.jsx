@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import { View, StyleSheet, TextInput, Pressable } from "react-native";
 import { COLORS } from "../constants/themes";
 
+/**
+ * Input de texto de la app.
+ * `theme` es opcional: si la pantalla ya soporta modo oscuro se lo pasa y el
+ * input adopta esos colores; si se omite, mantiene el look claro por defecto.
+ */
 const NebulaTextInput = ({
   id,
   value,
@@ -12,12 +17,20 @@ const NebulaTextInput = ({
   focusable = false,
   disabled = false,
   inputMode = "text",
-  placeholderTextColor = "#8E9AA6",
+  placeholderTextColor,
   isDisabledBorder = false,
   secureTextEntry = false,
   autoCapitalize = "characters",
+  theme,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+
+  const bgColor = theme?.surface || "#FFFFFF";
+  const textColor = theme?.textPrimary || "#1A1D20";
+  const idleBorder = theme?.border || "#E0E0E0";
+  const focusBorder = theme?.brand || COLORS.default;
+  const placeholderColor =
+    placeholderTextColor || theme?.textSecondary || "#8E9AA6";
 
   return (
     <View style={styles.row}>
@@ -26,21 +39,26 @@ const NebulaTextInput = ({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={placeholderTextColor}
+        placeholderTextColor={placeholderColor}
         autoCapitalize={autoCapitalize}
         secureTextEntry={secureTextEntry}
         style={[
           styles.input,
           {
+            backgroundColor: bgColor,
+            color: textColor,
             borderColor: isDisabledBorder
               ? "transparent"
               : isFocused
-              ? COLORS.default
-              : "#E0E0E0",
+              ? focusBorder
+              : idleBorder,
             borderTopRightRadius: children ? 0 : 14,
             borderBottomRightRadius: children ? 0 : 14,
           },
-          disabled && styles.inputDisabled,
+          disabled && {
+            backgroundColor: theme?.inputBg || "#F3F4F6",
+            color: theme?.textSecondary || "#8E9AA6",
+          },
         ]}
         inputMode={inputMode}
         autoFocus={focusable}
@@ -50,7 +68,10 @@ const NebulaTextInput = ({
         onBlur={() => setIsFocused(false)}
       />
       {children ? (
-        <Pressable disabled={!disabled} style={styles.childrenWrapper}>
+        <Pressable
+          disabled={!disabled}
+          style={[styles.childrenWrapper, { backgroundColor: focusBorder }]}
+        >
           {children}
         </Pressable>
       ) : null}
@@ -69,21 +90,14 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 14,
     borderTopLeftRadius: 14,
     paddingHorizontal: 16,
-    color: "#1A1D20",
     height: 46,
     fontSize: 14,
     fontWeight: "500",
     flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  inputDisabled: {
-    backgroundColor: "#F3F4F6",
-    color: "#8E9AA6",
   },
   childrenWrapper: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.default,
     borderBottomRightRadius: 14,
     borderTopRightRadius: 14,
     width: 46,

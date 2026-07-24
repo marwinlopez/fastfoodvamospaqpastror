@@ -24,6 +24,12 @@ exports.search = asyncHandler(async (req, res) => {
   res.json({ data });
 });
 
+exports.restock = asyncHandler(async (req, res) => {
+  const { unidades } = req.body;
+  const product = await productService.restockProduct(req.params.id, unidades);
+  res.json({ success: true, product });
+});
+
 exports.getById = asyncHandler(async (req, res) => {
   const product = await productService.getProductById(req.params.id);
   if (!product) {

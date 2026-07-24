@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "web"],
       "cwd": "app",
       "port": 19006
+    },
+    {
+      "name": "expo-web-alt",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start", "--web", "--port", "8082"],
+      "cwd": "app",
+      "port": 8082
     }
   ]
 }

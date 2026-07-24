@@ -133,6 +133,15 @@ export const BackgroundSyncService = {
     }
   },
 
+  async clearSyncQueue() {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.QUEUE);
+      console.log("[SyncService] Cola de sincronización vaciada.");
+    } catch (error) {
+      console.log("[SyncService] Error al vaciar cola:", error);
+    }
+  },
+
   // Procesar cola en segundo plano
   async processSyncQueue() {
     try {
@@ -169,16 +178,25 @@ export const BackgroundSyncService = {
             await apis.createProduct(action.payload);
           } else if (action.type === "editProduct") {
             await apis.updateProduct(action.payload.id, action.payload.payload);
+          } else if (action.type === "restockProduct") {
+            await apis.restockProduct(action.payload.id, {
+              unidades: action.payload.unidades,
+            });
           }
           console.log(
             `[SyncService] Acción de cola sincronizada: ${action.type}`
           );
         } catch (err) {
-          console.log(
-            `[SyncService] Re-encolando acción fallida: ${action.type}`,
-            err
-          );
-          remainingQueue.push(action);
+          if (err.response) {
+            console.log(
+              `[SyncService] Descartando acción irrecuperable (${err.response.status}): ${action.type}`
+            );
+          } else {
+            console.log(
+              `[SyncService] Re-encolando acción fallida (sin conexión): ${action.type}`
+            );
+            remainingQueue.push(action);
+          }
         }
       }
 

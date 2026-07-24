@@ -1,15 +1,13 @@
-import React, { useEffect, useState, useReducer } from "react";
+import React, { useEffect, useState, useReducer, useMemo } from "react";
 import {
   Alert,
-  StatusBar,
   StyleSheet,
   Text,
   ToastAndroid,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "../components/Header";
-import { COLORS } from "../constants/themes";
+import ScreenHeader from "../components/ScreenHeader";
 import apis from "../apis";
 import MaterialReducer, {
   actionCreators,
@@ -21,10 +19,17 @@ import { Button } from "@rneui/themed";
 import { Feather } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
+import useTheme from "../hooks/useTheme";
+import useGlobal from "../hooks/useGlobal";
 
 const MaterialScreens = ({ navigation, route }) => {
+  const theme = useTheme();
+  const { company } = useGlobal();
+  const money = company?.currencySymbol || "$";
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [state, dispatch] = useReducer(MaterialReducer, stateIngredients);
   const [isAdd, setIsAdd] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [isError, setIsError] = useState(false);
   const [selectedValue, setSelectedValue] = useState({
@@ -207,10 +212,14 @@ const MaterialScreens = ({ navigation, route }) => {
   };
 
   const addQuantityRecipe = async () => {
+    if (saving) return;
     let id = 0;
     if (selectedValue != null && quantity > 0) {
+      setSaving(true);
       try {
-        if (recipe.recipeId === 0) {
+        // El id puede venir como recipeId o id (string); 0/vacío = receta nueva
+        const existingRecipeId = recipe.recipeId ?? recipe.id;
+        if (!existingRecipeId || existingRecipeId === 0 || existingRecipeId === "0") {
           try {
             const data = await actionCreators.addRecipe({
               id: 0,
@@ -219,7 +228,7 @@ const MaterialScreens = ({ navigation, route }) => {
               coin: "USD",
               isActive: true,
             });
-            id = data.recipeId;
+            id = data.recipeId || data.id;
           } catch (error) {
             ToastAndroid.show(
               "Error al Guardar la receta",
@@ -227,7 +236,7 @@ const MaterialScreens = ({ navigation, route }) => {
             );
           }
         } else {
-          id = recipe.recipeId;
+          id = existingRecipeId;
         }
 
         const ingredientPayload = {
@@ -290,6 +299,8 @@ const MaterialScreens = ({ navigation, route }) => {
           "Error al Guardar los ingrediente",
           ToastAndroid.CENTER
         );
+      } finally {
+        setSaving(false);
       }
     } else {
       setIsError(!isError);
@@ -306,16 +317,16 @@ const MaterialScreens = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
-      <Header
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <ScreenHeader
+        theme={theme}
+        onBack={redirectActionLeft}
         title={
           ingredient && ingredient.idIngredient > 0
-            ? "MODIFICAR CANTIDAD"
-            : "AÑADIR CANTIDAD"
+            ? "Modificar Cantidad"
+            : "Añadir Cantidad"
         }
-        buttonLeft={"arrow-left"}
-        actionLeft={redirectActionLeft}
+        subtitle="Indica la cantidad y unidad de medida del ingrediente."
       />
 
       <KeyboardAwareScrollView
@@ -337,7 +348,7 @@ const MaterialScreens = ({ navigation, route }) => {
               <Feather
                 name="layers"
                 size={16}
-                color="#8E9AA6"
+                color={theme.textSecondary}
                 style={{ marginRight: 10 }}
               />
               <Text style={styles.readOnlyText}>
@@ -351,7 +362,8 @@ const MaterialScreens = ({ navigation, route }) => {
               <Text style={styles.label}>Precio</Text>
               <View style={styles.readOnlyField}>
                 <Text style={styles.readOnlyText}>
-                  {ingredient?.priceProduct !== undefined ? Number(ingredient.priceProduct).toFixed(2) : "0.00"} $
+                  {money}{" "}
+                  {ingredient?.priceProduct !== undefined ? Number(ingredient.priceProduct).toFixed(2) : "0.00"}
                 </Text>
               </View>
             </View>
@@ -361,7 +373,7 @@ const MaterialScreens = ({ navigation, route }) => {
                 <Text style={styles.label}>Cantidad Empaque</Text>
                 <View style={styles.readOnlyField}>
                   <Text style={styles.readOnlyText}>
-                    {ingredient?.quantityPack || "0"}{" "}
+                    {Number(ingredient?.quantityPack || 0).toFixed(2)}{" "}
                     {ingredient?.unitOfMeasurement || ""}
                   </Text>
                 </View>
@@ -372,8 +384,15 @@ const MaterialScreens = ({ navigation, route }) => {
           <View style={styles.formGroup}>
             <Text style={styles.label}>Cantidad a usar</Text>
             <NebulaTextInput
+              theme={theme}
               inputMode="numeric"
-              defaultValue={(ingredient?.quantity || ingredient?.quantityUnitOfMeasurement || "").toString()}
+              defaultValue={
+                ingredient?.quantity || ingredient?.quantityUnitOfMeasurement
+                  ? Number(
+                      ingredient.quantity ?? ingredient.quantityUnitOfMeasurement
+                    ).toFixed(2)
+                  : ""
+              }
               placeholder="Ej. 1.5"
               onChangeText={(text) => {
                 setQuantity(text);
@@ -396,7 +415,7 @@ const MaterialScreens = ({ navigation, route }) => {
               renderDropdownIcon={(isOpened) => (
                 <Feather
                   name={isOpened ? "chevron-up" : "chevron-down"}
-                  color="#8E9AA6"
+                  color={theme.textSecondary}
                   size={18}
                 />
               )}
@@ -411,7 +430,8 @@ const MaterialScreens = ({ navigation, route }) => {
 
           <Button
             containerStyle={styles.buttonContainer}
-            disabled={disabled}
+            disabled={disabled || saving}
+            loading={saving}
             buttonStyle={styles.buttonStyle}
             disabledStyle={styles.buttonDisabledStyle}
             disabledTitleStyle={styles.buttonDisabledTitleStyle}
@@ -429,10 +449,10 @@ const MaterialScreens = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: t.background,
   },
   scrollContainer: {
     paddingHorizontal: 20,
@@ -440,17 +460,17 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   contextCard: {
-    backgroundColor: "#5802F108",
+    backgroundColor: t.brand + "14",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#5802F115",
+    borderColor: t.brand + "26",
   },
   contextLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#5802F1",
+    color: t.brand,
     textTransform: "uppercase",
     letterSpacing: 1.1,
     marginBottom: 4,
@@ -458,15 +478,15 @@ const styles = StyleSheet.create({
   recipeNameText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1A1D20",
+    color: t.textPrimary,
   },
   formCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: t.surface,
     borderRadius: 24,
     padding: 20,
-    shadowColor: "#1A1D20",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
+    shadowOpacity: t.shadowOpacity,
     shadowRadius: 16,
     elevation: 3,
   },
@@ -480,7 +500,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#8E9AA6",
+    color: t.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 1.1,
     marginBottom: 8,
@@ -488,7 +508,7 @@ const styles = StyleSheet.create({
   readOnlyField: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: t.inputBg,
     borderRadius: 14,
     height: 46,
     paddingHorizontal: 16,
@@ -496,11 +516,11 @@ const styles = StyleSheet.create({
   readOnlyText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#4B5563",
+    color: t.textPrimary,
   },
   dropdownButton: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E0E0E0",
+    backgroundColor: t.surface,
+    borderColor: t.border,
     borderWidth: 1,
     borderRadius: 14,
     height: 46,
@@ -508,27 +528,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   dropdownButtonText: {
-    color: "#1A1D20",
+    color: t.textPrimary,
     fontSize: 14,
     fontWeight: "500",
     textAlign: "left",
   },
   dropdownMenu: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: t.surface,
     borderRadius: 16,
     borderWidth: 0,
-    shadowColor: "#1A1D20",
+    shadowColor: t.shadowColor,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 4,
   },
   dropdownRow: {
-    borderBottomColor: "#F5F5F5",
+    borderBottomColor: t.border,
     height: 44,
   },
   dropdownRowText: {
-    color: "#1A1D20",
+    color: t.textPrimary,
     fontSize: 14,
     textAlign: "left",
     paddingLeft: 16,
@@ -539,15 +559,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonStyle: {
-    backgroundColor: "#5802F1",
+    backgroundColor: t.brand,
     paddingVertical: 12,
     borderRadius: 14,
   },
   buttonDisabledStyle: {
-    backgroundColor: "#8041ec",
+    backgroundColor: t.brand + "80",
   },
   buttonDisabledTitleStyle: {
-    color: "#8041ec",
+    color: "#E4D5FF",
   },
   buttonTitle: {
     fontSize: 14,
