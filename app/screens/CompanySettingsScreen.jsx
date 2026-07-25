@@ -42,13 +42,16 @@ const CompanySettingsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [name, setName] = useState("");
-  const [slogan, setSlogan] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [currency, setCurrency] = useState("USD");
-  const [currencySymbol, setCurrencySymbol] = useState("$");
-  const [themeMode, setThemeMode] = useState("system");
+  // Se inicializa con la empresa ya conocida globalmente (cargada al
+  // iniciar sesión) para que la pantalla de carga no parpadee en claro
+  // mientras se espera la respuesta del servidor.
+  const [name, setName] = useState(company?.name || "");
+  const [slogan, setSlogan] = useState(company?.slogan || "");
+  const [phone, setPhone] = useState(company?.phone || "");
+  const [address, setAddress] = useState(company?.address || "");
+  const [currency, setCurrency] = useState(company?.currency || "USD");
+  const [currencySymbol, setCurrencySymbol] = useState(company?.currencySymbol || "$");
+  const [themeMode, setThemeMode] = useState(company?.themeMode || "system");
 
   // Preview en vivo: el tema se deriva de la selección local (no del estado
   // global), así el usuario ve el cambio de inmediato antes de guardar.

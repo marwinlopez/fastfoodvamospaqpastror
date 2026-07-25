@@ -10,7 +10,11 @@ if (!API_URL) {
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 5000,
+  // 5s se quedaba corto en red móvil + túnel ngrok, sobre todo justo al
+  // abrir la app (restaurar sesión) cuando la conexión recién se establece:
+  // un timeout ahí no es "sesión inválida", pero bota al usuario al login
+  // igual porque restoreSession() no distingue la causa.
+  timeout: 15000,
 });
 
 // Token en memoria: los interceptores necesitan leerlo de forma síncrona en

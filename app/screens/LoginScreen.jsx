@@ -188,6 +188,7 @@ const LoginScreen = () => {
                     Correo electrónico
                   </Text>
                   <NebulaTextInput
+                    theme={theme}
                     value={email}
                     onChangeText={setEmail}
                     placeholder="tu@correo.com"
@@ -201,6 +202,7 @@ const LoginScreen = () => {
                     Contraseña
                   </Text>
                   <NebulaTextInput
+                    theme={theme}
                     value={password}
                     onChangeText={setPassword}
                     placeholder="••••••••"
