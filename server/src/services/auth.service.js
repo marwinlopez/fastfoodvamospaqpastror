@@ -1,12 +1,24 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const staffRepository = require("../repositories/staff.repository");
+const roleRepository = require("../repositories/role.repository");
 const AppError = require("../errors/app-error");
 
 const stripPassword = (record) => {
   if (!record) return record;
   const { passwordHash, ...safe } = record;
   return safe;
+};
+
+// Adjunta los permisos del rol asignado al staff. Si no tiene rol (roleId
+// nulo) o el rol ya no existe, se omite `permissions` — el cliente trata la
+// ausencia de este campo como "sin restricción" para no romper cuentas
+// creadas antes de que existiera este sistema de permisos.
+const attachPermissions = async (staff) => {
+  if (!staff?.roleId) return staff;
+  const role = await roleRepository.getById(staff.roleId);
+  if (!role) return staff;
+  return { ...staff, permissions: role.permissions || [] };
 };
 
 class AuthService {
@@ -32,7 +44,8 @@ class AuthService {
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
-    return { token, staff: stripPassword(staff) };
+    const staffWithPermissions = await attachPermissions(stripPassword(staff));
+    return { token, staff: staffWithPermissions };
   }
 
   async getCurrentStaff(staffId) {
@@ -40,7 +53,7 @@ class AuthService {
     if (!staff) {
       throw new AppError("El usuario ya no existe", 404, "NOT_FOUND");
     }
-    return stripPassword(staff);
+    return await attachPermissions(stripPassword(staff));
   }
 }
 

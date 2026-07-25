@@ -290,9 +290,12 @@ const RecipeScreens = ({ navigation, route }) => {
               dispatch(actionCreators.loading());
               await apis.deleteIngredient(item.idIngredient);
               ToastAndroid.show("Ingrediente eliminado", ToastAndroid.SHORT);
-              // Refrescar receta
+              // Refrescar receta. editRecipe() ya devuelve el objeto receta
+              // directamente (no envuelto en { data }, como sí hace axios) —
+              // desestructurar { data } aquí producía undefined y hacía
+              // fallar el reducer al leer payload.name.
               const searchId = recipe.recipeId || recipe.id;
-              const { data } = await actionCreators.editRecipe(searchId);
+              const data = await actionCreators.editRecipe(searchId);
               dispatch(actionCreators.success(data));
             } catch (error) {
               console.log("Error al eliminar ingrediente:", error);

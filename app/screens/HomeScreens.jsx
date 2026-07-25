@@ -12,6 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import useGlobal from "../hooks/useGlobal";
 import useTheme from "../hooks/useTheme";
+import usePermissions from "../hooks/usePermissions";
 import apis from "../apis";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -23,6 +24,7 @@ const MONTHS = [
 const HomeScreens = ({ navigation }) => {
   const { user, company } = useGlobal();
   const theme = useTheme();
+  const { can } = usePermissions();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [stats, setStats] = useState({ products: null, recipes: null, menu: null });
 
@@ -69,6 +71,7 @@ const HomeScreens = ({ navigation }) => {
       color: "#5802F1",
       bg: "#F1EAFE",
       url: "ProductsSaleScreen",
+      permissions: ["view_menu", "edit_menu"],
     },
     {
       id: 2,
@@ -87,6 +90,7 @@ const HomeScreens = ({ navigation }) => {
       color: "#D97706",
       bg: "#FDF0DC",
       url: "MaterialsScreen",
+      permissions: ["view_inventory", "manage_inventory"],
     },
     {
       id: 4,
@@ -96,8 +100,11 @@ const HomeScreens = ({ navigation }) => {
       color: "#DB2777",
       bg: "#FCE7F0",
       url: "StaffSettingsScreen",
+      permissions: ["manage_staff"],
     },
-  ];
+  ].filter((action) => !action.permissions || action.permissions.some(can));
+
+  const canSeeMenuTab = can("view_menu") || can("edit_menu");
 
   const statItems = [
     { label: "Inventario", value: stats.products, icon: "package" },
@@ -207,13 +214,15 @@ const HomeScreens = ({ navigation }) => {
           <Text style={styles.footerTabText}>Órdenes</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.footerTab}
-          onPress={() => navigation.navigate("ProductsSaleScreen")}
-        >
-          <Feather name="book-open" size={20} color={theme.textSecondary} />
-          <Text style={styles.footerTabText}>Menú</Text>
-        </TouchableOpacity>
+        {canSeeMenuTab && (
+          <TouchableOpacity
+            style={styles.footerTab}
+            onPress={() => navigation.navigate("ProductsSaleScreen")}
+          >
+            <Feather name="book-open" size={20} color={theme.textSecondary} />
+            <Text style={styles.footerTabText}>Menú</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.footerTab}

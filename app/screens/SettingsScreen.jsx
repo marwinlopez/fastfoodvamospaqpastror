@@ -11,12 +11,14 @@ import { Feather } from "@expo/vector-icons";
 import ScreenHeader from "../components/ScreenHeader";
 import useGlobal from "../hooks/useGlobal";
 import useTheme from "../hooks/useTheme";
+import usePermissions from "../hooks/usePermissions";
 import { actionCreators } from "../hooks/GlobalReducer";
 import AuthService from "../services/AuthService";
 
 const SettingsScreen = ({ navigation }) => {
   const { dispatch } = useGlobal();
   const theme = useTheme();
+  const { can } = usePermissions();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const handleLogout = async () => {
@@ -52,6 +54,7 @@ const SettingsScreen = ({ navigation }) => {
       description: "Administrar datos de cocineros, cajeros y personal",
       icon: "users",
       url: "StaffSettingsScreen",
+      permissions: ["manage_staff"],
     },
     {
       id: 4,
@@ -59,8 +62,11 @@ const SettingsScreen = ({ navigation }) => {
       description: "Configurar accesos y perfiles de usuario",
       icon: "shield",
       url: "RoleSettingsScreen",
+      permissions: ["manage_roles"],
     },
-  ];
+  ].filter((opt) => !opt.permissions || opt.permissions.some(can));
+
+  const canSeeMenuTab = can("view_menu") || can("edit_menu");
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
@@ -129,13 +135,15 @@ const SettingsScreen = ({ navigation }) => {
           <Text style={styles.footerTabText}>Órdenes</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.footerTab}
-          onPress={() => navigation.navigate("MenuScreen")}
-        >
-          <Feather name="book-open" size={20} color={theme.textSecondary} />
-          <Text style={styles.footerTabText}>Menú</Text>
-        </TouchableOpacity>
+        {canSeeMenuTab && (
+          <TouchableOpacity
+            style={styles.footerTab}
+            onPress={() => navigation.navigate("MenuScreen")}
+          >
+            <Feather name="book-open" size={20} color={theme.textSecondary} />
+            <Text style={styles.footerTabText}>Menú</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.footerTab}>
           <Feather name="settings" size={20} color={theme.brand} />
