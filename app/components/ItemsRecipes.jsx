@@ -11,7 +11,7 @@ import { Feather } from "@expo/vector-icons";
 import useTheme from "../hooks/useTheme";
 import useGlobal from "../hooks/useGlobal";
 
-const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh }) => {
+const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh, yieldMap = {} }) => {
   const [refreshing] = useState(false);
   const theme = useTheme();
   const { company } = useGlobal();
@@ -31,6 +31,8 @@ const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh })
         </View>
       )}
       renderItem={({ item }) => {
+        const recipeId = item.recipeId || item.id;
+        const maxProduceable = yieldMap[recipeId];
         const CardContent = (
           <View style={styles.card}>
             <View style={styles.cardLeft}>
@@ -39,11 +41,35 @@ const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh })
               </View>
               <View style={styles.textContent}>
                 <Text style={styles.recipeName}>{item.name}</Text>
-                <View style={styles.costBadge}>
-                  <Text style={styles.costText}>
-                    Costo: {money}{" "}
-                    {item.cost !== undefined ? Number(item.cost).toFixed(2) : "0.00"}
-                  </Text>
+                <View style={styles.badgeRow}>
+                  <View style={styles.costBadge}>
+                    <Text style={styles.costText}>
+                      Costo: {money}{" "}
+                      {item.cost !== undefined ? Number(item.cost).toFixed(2) : "0.00"}
+                    </Text>
+                  </View>
+                  {maxProduceable !== undefined && (
+                    <View
+                      style={[
+                        styles.yieldBadge,
+                        { backgroundColor: (maxProduceable > 0 ? theme.brand : theme.danger) + "1F" },
+                      ]}
+                    >
+                      <Feather
+                        name="box"
+                        size={10}
+                        color={maxProduceable > 0 ? theme.brand : theme.danger}
+                      />
+                      <Text
+                        style={[
+                          styles.yieldText,
+                          { color: maxProduceable > 0 ? theme.brand : theme.danger },
+                        ]}
+                      >
+                        {" "}Produce: {maxProduceable}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
@@ -52,11 +78,17 @@ const ItemsRecipes = ({ recipes, edit, deleteItem, isSelectionMode, onRefresh })
                 <Feather name="plus-circle" size={24} color={theme.brand} style={{ padding: 8 }} />
               ) : (
                 <>
-                  <TouchableOpacity onPress={() => edit("RecipeScreen", "editRecipe", item)} style={{ padding: 8 }}>
-                    <Feather name="edit-2" size={18} color={theme.textSecondary} />
+                  <TouchableOpacity
+                    onPress={() => edit("RecipeScreen", "editRecipe", item)}
+                    style={[styles.actionIconButton, { backgroundColor: theme.inputBg }]}
+                  >
+                    <Feather name="edit-2" size={16} color={theme.textSecondary} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => deleteItem(item)} style={{ padding: 8 }}>
-                    <Feather name="trash-2" size={18} color={theme.danger} />
+                  <TouchableOpacity
+                    onPress={() => deleteItem(item)}
+                    style={[styles.actionIconButton, styles.actionIconButtonLast, { backgroundColor: theme.danger + "1A" }]}
+                  >
+                    <Feather name="trash-2" size={16} color={theme.danger} />
                   </TouchableOpacity>
                 </>
               )}
@@ -151,23 +183,52 @@ const makeStyles = (t) => StyleSheet.create({
     color: t.textPrimary,
     marginBottom: 6,
   },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
   costBadge: {
     alignSelf: "flex-start",
     backgroundColor: t.success + "1F",
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
+    marginRight: 6,
+    marginTop: 4,
   },
   costText: {
     fontSize: 11,
     fontWeight: "700",
     color: t.success,
   },
+  yieldBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 4,
+  },
+  yieldText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  actionIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 6,
+  },
+  actionIconButtonLast: {
+    marginLeft: 8,
+  },
   cardRight: {
     justifyContent: "center",
     alignItems: "center",
-    width: 40,
-    height: 40,
   },
 });
 

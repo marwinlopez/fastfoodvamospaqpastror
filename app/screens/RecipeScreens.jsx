@@ -22,6 +22,7 @@ import apis from "../apis";
 import { Feather } from "@expo/vector-icons";
 import useGlobal from "../hooks/useGlobal";
 import useTheme from "../hooks/useTheme";
+import { calculateMaxProduction } from "../utils/recipeYield";
 
 const RecipeScreens = ({ navigation, route }) => {
   const { company } = useGlobal();
@@ -96,70 +97,23 @@ const RecipeScreens = ({ navigation, route }) => {
 
       try {
         const recipeRes = await apis.recipeAll().catch(() => null);
-        const listRecipes = recipeRes?.data?.recipes || (Array.isArray(recipeRes?.data) ? recipeRes.data : []);
-        setRecipesList(listRecipes);
+        const summaryList = recipeRes?.data?.recipes || (Array.isArray(recipeRes?.data) ? recipeRes.data : []);
+        // El listado resumido no trae `ingredients`, y el cálculo recursivo
+        // de porciones producibles necesita los ingredientes de cada
+        // sub-receta para saber si su propia materia prima alcanza — se
+        // trae el detalle completo de cada una.
+        const detailedRecipes = await Promise.all(
+          summaryList.map((r) =>
+            apis.recipeForId(r.recipeId || r.id).then((res) => res?.data?.recipe).catch(() => null)
+          )
+        );
+        setRecipesList(detailedRecipes.filter(Boolean));
       } catch (err) {
         console.log("Error loading recipes for yield calculation:", err);
       }
     };
     loadYieldData();
   }, [recipe]);
-
-  const convertUnits = (value, fromUnit, toUnit) => {
-    const from = (fromUnit || "").toLowerCase().trim();
-    const to = (toUnit || "").toLowerCase().trim();
-    if (from === to) return value;
-    if (from === "kilogramos" && to === "gramos") return value * 1000;
-    if (from === "gramos" && to === "kilogramos") return value / 1000;
-    if (from === "litros" && to === "mililitros") return value * 1000;
-    if (from === "mililitros" && to === "litros") return value / 1000;
-    if (from === "libras" && to === "gramos") return value * 453.592;
-    if (from === "gramos" && to === "libras") return value / 453.592;
-    return value;
-  };
-
-  const calculateMaxProduction = (rec, prods, recs, visited = new Set()) => {
-    if (!rec || !rec.ingredients || rec.ingredients.length === 0) return 0;
-    
-    const recId = rec.recipeId || rec.id;
-    if (recId) {
-      if (visited.has(recId)) return 0;
-      visited.add(recId);
-    }
-
-    let minProduction = Infinity;
-
-    for (const ing of rec.ingredients) {
-      const isSubRecipe = ing.subRecipeId !== null && ing.subRecipeId !== undefined;
-      const ingQty = parseFloat(ing.quantity || ing.quantityUnitOfMeasurement || 0);
-      if (ingQty <= 0) continue;
-
-      if (isSubRecipe) {
-        const subRec = recs.find(r => (r.recipeId || r.id) === ing.subRecipeId);
-        if (subRec) {
-          const subRecMax = calculateMaxProduction(subRec, prods, recs, new Set(visited));
-          const ingredientMax = subRecMax / ingQty;
-          minProduction = Math.min(minProduction, ingredientMax);
-        } else {
-          minProduction = 0;
-        }
-      } else {
-        const pId = ing.productId || ing.id;
-        const prod = prods.find(p => (p.productId || p.id || p.productoId) === pId);
-        if (prod) {
-          // Stock disponible = unidades individuales × contenido por unidad
-          const productStock = parseFloat(prod.cantidadPresentacion || 0) * parseFloat(prod.stock || 0);
-          const availableStock = convertUnits(productStock, prod.unidadMedida, ing.unitOfMeasurement);
-          const ingredientMax = availableStock / ingQty;
-          minProduction = Math.min(minProduction, ingredientMax);
-        } else {
-          minProduction = 0;
-        }
-      }
-    }
-
-    return minProduction === Infinity ? 0 : Math.floor(minProduction);
-  };
 
   const maxProduceable = calculateMaxProduction(recipe, productsList, recipesList);
 

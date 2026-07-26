@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useMemo } from "react";
+import React, { useEffect, useReducer, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   View,
@@ -13,11 +13,13 @@ import apis from "../apis";
 import ItemsRecipes from "../components/ItemsRecipes";
 import ScreenHeader from "../components/ScreenHeader";
 import useTheme from "../hooks/useTheme";
+import { calculateMaxProduction } from "../utils/recipeYield";
 
 const RecipesScreens = ({ navigation, route }) => {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [state, dispatch] = useReducer(RecipesReducer, initialState);
+  const [yieldMap, setYieldMap] = useState({});
   const { isSelectionMode, recipe: parentRecipe } = route.params || {};
   const { loading, error, recipes } = state;
 
@@ -40,9 +42,43 @@ const RecipesScreens = ({ navigation, route }) => {
       });
   };
 
+  // Cuántas porciones de cada receta alcanza a producir el inventario
+  // actual. Requiere el detalle completo (con ingredientes) de todas las
+  // recetas, no el listado resumido que ya usa el reducer para la lista.
+  const fetchYieldMap = async () => {
+    try {
+      const [prodRes, recipeRes] = await Promise.all([
+        apis.allProducts().catch(() => null),
+        apis.recipeAll().catch(() => null),
+      ]);
+      const listProds = prodRes?.data?.data || prodRes?.data?.products || (Array.isArray(prodRes?.data) ? prodRes.data : []);
+      const summaryList = recipeRes?.data?.recipes || (Array.isArray(recipeRes?.data) ? recipeRes.data : []);
+
+      const detailedRecipes = await Promise.all(
+        summaryList.map((r) =>
+          apis.recipeForId(r.recipeId || r.id).then((res) => res?.data?.recipe).catch(() => null)
+        )
+      );
+      const validRecipes = detailedRecipes.filter(Boolean);
+
+      const map = {};
+      validRecipes.forEach((rec) => {
+        const id = rec.recipeId || rec.id;
+        map[id] = calculateMaxProduction(rec, listProds, validRecipes);
+      });
+      setYieldMap(map);
+    } catch (err) {
+      console.log("Error calculando porciones producibles:", err);
+    }
+  };
+
   useEffect(() => {
     fetchRecipes();
-    const unsubscribe = navigation.addListener("focus", fetchRecipes);
+    fetchYieldMap();
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchRecipes();
+      fetchYieldMap();
+    });
     return unsubscribe;
   }, [navigation]);
 
@@ -130,6 +166,7 @@ const RecipesScreens = ({ navigation, route }) => {
           deleteItem={deleteRecipe}
           isSelectionMode={isSelectionMode}
           onRefresh={fetchRecipes}
+          yieldMap={yieldMap}
         />
       </View>
 
