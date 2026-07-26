@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import apis from "../apis";
 import ScreenHeader from "../components/ScreenHeader";
 import useTheme from "../hooks/useTheme";
@@ -284,36 +284,31 @@ const MenuScreen = ({ navigation, route }) => {
 
   const handlePickImage = async () => {
     try {
+      console.log("[imagen] pidiendo permiso...");
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         ToastAndroid.show("Necesitamos acceso a tus fotos para subir una imagen", ToastAndroid.SHORT);
         return;
       }
 
-      // Sin base64 aquí: una foto de cámara sin redimensionar puede pesar
-      // varios MB y, convertida a base64 completa en memoria, puede tumbar
-      // la app en el teléfono. Se pide la imagen liviana ya redimensionada
-      // más abajo con expo-image-manipulator.
+      console.log("[imagen] abriendo galería...");
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
       });
       if (result.canceled || !result.assets?.length) return;
 
       const asset = result.assets[0];
+      console.log("[imagen] elegida:", asset.uri, asset.width, asset.height, asset.fileSize);
 
       setUploadingImage(true);
 
-      // Encadenado en una sola expresión: resize() debe aplicarse sobre el
-      // mismo contexto que se renderiza — llamarlo suelto y luego renderizar
-      // el contexto original puede terminar ignorando el resize.
-      const renderedImage = await ImageManipulator.manipulate(asset.uri)
-        .resize({ width: 1000 })
-        .renderAsync();
-      let manipulated = await renderedImage.saveAsync({
-        compress: 0.5,
-        format: SaveFormat.JPEG,
-        base64: true,
-      });
+      console.log("[imagen] redimensionando...");
+      let manipulated = await manipulateAsync(
+        asset.uri,
+        [{ resize: { width: 1000 } }],
+        { compress: 0.5, format: SaveFormat.JPEG, base64: true }
+      );
+      console.log("[imagen] redimensionada, base64 length:", manipulated.base64?.length);
 
       if (!manipulated.base64) {
         ToastAndroid.show("No se pudo procesar la imagen seleccionada", ToastAndroid.SHORT);
@@ -324,14 +319,13 @@ const MenuScreen = ({ navigation, route }) => {
       // recomprime una vez más antes de rendirse — evita un 413 silencioso
       // del backend por payload demasiado grande.
       if (manipulated.base64.length > 3 * 1024 * 1024) {
-        const secondPass = await ImageManipulator.manipulate(renderedImage.uri)
-          .resize({ width: 700 })
-          .renderAsync();
-        manipulated = await secondPass.saveAsync({
-          compress: 0.35,
-          format: SaveFormat.JPEG,
-          base64: true,
-        });
+        console.log("[imagen] aún pesada, recomprimiendo...");
+        manipulated = await manipulateAsync(
+          manipulated.uri,
+          [{ resize: { width: 700 } }],
+          { compress: 0.35, format: SaveFormat.JPEG, base64: true }
+        );
+        console.log("[imagen] recomprimida, base64 length:", manipulated.base64?.length);
       }
 
       if (manipulated.base64.length > 4 * 1024 * 1024) {
@@ -340,14 +334,16 @@ const MenuScreen = ({ navigation, route }) => {
       }
 
       const dataUri = `data:image/jpeg;base64,${manipulated.base64}`;
+      console.log("[imagen] subiendo al servidor...");
       const { data } = await apis.uploadImage(dataUri, name || "platillo");
+      console.log("[imagen] respuesta del servidor:", JSON.stringify(data));
       if (data?.success && data?.url) {
         setImageUrl(data.url);
       } else {
         ToastAndroid.show("Error al subir la imagen", ToastAndroid.SHORT);
       }
     } catch (error) {
-      console.log("Error picking/uploading image:", error);
+      console.log("Error picking/uploading image:", error?.message || error);
       ToastAndroid.show("Error al subir la imagen", ToastAndroid.SHORT);
     } finally {
       setUploadingImage(false);
