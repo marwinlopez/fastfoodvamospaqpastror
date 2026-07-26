@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -34,6 +34,11 @@ const MenuScreen = ({ navigation, route }) => {
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Recuerda qué ítem ya se cargó en el formulario para no reiniciarlo con
+  // los datos originales (sin la imagen recién subida) cada vez que la
+  // pantalla recupera el foco — por ejemplo, al volver del selector de
+  // imágenes del sistema, que también dispara un evento de foco.
+  const loadedItemKeyRef = useRef(undefined);
 
   // Form State
   const [editingId, setEditingId] = useState(null);
@@ -131,6 +136,15 @@ const MenuScreen = ({ navigation, route }) => {
       await fetchRecipeLinkData();
 
       const passedItem = route.params?.item;
+      const itemKey = passedItem ? (passedItem.id || passedItem.menuId) : null;
+
+      // Solo reinicializar el formulario cuando realmente cambia el ítem
+      // que se edita (o se pasa de editar a crear uno nuevo) — si ya está
+      // cargado, un nuevo evento de foco no debe pisar cambios sin guardar
+      // (ej. la imagen recién subida) con los datos originales del servidor.
+      if (loadedItemKeyRef.current === itemKey) return;
+      loadedItemKeyRef.current = itemKey;
+
       if (passedItem) {
         setEditingId(passedItem.id || passedItem.menuId);
         setName(passedItem.name);
@@ -238,6 +252,7 @@ const MenuScreen = ({ navigation, route }) => {
       setSelectedRecipeId(null);
       setSelectedProductId(null);
       setEditingId(null);
+      loadedItemKeyRef.current = undefined;
 
       navigation.navigate("ProductsSaleScreen");
     } catch (error) {
@@ -249,6 +264,7 @@ const MenuScreen = ({ navigation, route }) => {
   };
 
   const handleEdit = (item) => {
+    loadedItemKeyRef.current = item.id || item.menuId;
     setEditingId(item.id || item.menuId);
     setName(item.name);
     setPrice(Number(item.price || 0).toFixed(2));
@@ -558,6 +574,7 @@ const MenuScreen = ({ navigation, route }) => {
                   setStock("");
                   setSelectedRecipeId(null);
                   setSelectedProductId(null);
+                  loadedItemKeyRef.current = undefined;
                 }}
               >
                 <Text style={styles.cancelButtonText}>Cancelar Edición</Text>
