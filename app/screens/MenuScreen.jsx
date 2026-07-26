@@ -231,7 +231,6 @@ const MenuScreen = ({ navigation, route }) => {
       recipeId: selectedRecipeId || null,
       productId: selectedProductId || null,
     };
-    console.log("[guardar] payload:", JSON.stringify(payload), "editingId:", editingId);
 
     try {
       setLoading(true);
@@ -310,14 +309,12 @@ const MenuScreen = ({ navigation, route }) => {
 
   const handlePickImage = async () => {
     try {
-      console.log("[imagen] pidiendo permiso...");
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         ToastAndroid.show("Necesitamos acceso a tus fotos para subir una imagen", ToastAndroid.SHORT);
         return;
       }
 
-      console.log("[imagen] abriendo galería...");
       // Abrir el picker manda la app a segundo plano brevemente — sin esto,
       // el listener global de biometría lo interpreta como que el usuario
       // salió de la app y la bloquea al volver.
@@ -328,17 +325,14 @@ const MenuScreen = ({ navigation, route }) => {
       if (result.canceled || !result.assets?.length) return;
 
       const asset = result.assets[0];
-      console.log("[imagen] elegida:", asset.uri, asset.width, asset.height, asset.fileSize);
 
       setUploadingImage(true);
 
-      console.log("[imagen] redimensionando...");
       let manipulated = await manipulateAsync(
         asset.uri,
         [{ resize: { width: 800 } }],
         { compress: 0.4, format: SaveFormat.JPEG, base64: true }
       );
-      console.log("[imagen] redimensionada, base64 length:", manipulated.base64?.length);
 
       if (!manipulated.base64) {
         ToastAndroid.show("No se pudo procesar la imagen seleccionada", ToastAndroid.SHORT);
@@ -349,13 +343,11 @@ const MenuScreen = ({ navigation, route }) => {
       // recomprime una vez más antes de rendirse — evita un 413 silencioso
       // del backend por payload demasiado grande.
       if (manipulated.base64.length > 3 * 1024 * 1024) {
-        console.log("[imagen] aún pesada, recomprimiendo...");
         manipulated = await manipulateAsync(
           manipulated.uri,
           [{ resize: { width: 600 } }],
           { compress: 0.3, format: SaveFormat.JPEG, base64: true }
         );
-        console.log("[imagen] recomprimida, base64 length:", manipulated.base64?.length);
       }
 
       if (manipulated.base64.length > 4 * 1024 * 1024) {
@@ -369,9 +361,7 @@ const MenuScreen = ({ navigation, route }) => {
       setImagePreviewUri(manipulated.uri);
 
       const dataUri = `data:image/jpeg;base64,${manipulated.base64}`;
-      console.log("[imagen] subiendo al servidor...");
       const { data } = await apis.uploadImage(dataUri, name || "platillo");
-      console.log("[imagen] respuesta del servidor:", JSON.stringify(data));
       if (data?.success && data?.url) {
         setImageUrl(data.url);
       } else {
