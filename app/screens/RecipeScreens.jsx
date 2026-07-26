@@ -276,7 +276,7 @@ const RecipeScreens = ({ navigation, route }) => {
         {/* Datos de la receta */}
         <View style={styles.formCard}>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <View style={[styles.formGroup, { flex: 2, marginRight: 8, marginBottom: 0 }]}>
+            <View style={[styles.formGroup, { flex: 2, minWidth: 0, marginRight: 8, marginBottom: 0 }]}>
               <Text style={styles.label}>Nombre de la Receta</Text>
               <NebulaTextInput
                 theme={theme}
@@ -287,7 +287,7 @@ const RecipeScreens = ({ navigation, route }) => {
                 placeholder="Ej. Hamburguesa Doble"
               />
             </View>
-            <View style={[styles.formGroup, { flex: 1, marginBottom: 0 }]}>
+            <View style={[styles.formGroup, { flex: 1, minWidth: 0, marginBottom: 0 }]}>
               <Text style={styles.label}>Merma (%)</Text>
               <NebulaTextInput
                 theme={theme}

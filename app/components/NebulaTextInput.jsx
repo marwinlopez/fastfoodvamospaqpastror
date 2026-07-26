@@ -84,6 +84,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     width: "100%",
+    minWidth: 0,
   },
   input: {
     borderWidth: 1,
@@ -94,6 +95,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     flex: 1,
+    minWidth: 0,
   },
   childrenWrapper: {
     justifyContent: "center",
