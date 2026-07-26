@@ -64,3 +64,37 @@ export const calculateMaxProduction = (rec, prods, recs, visited = new Set()) =>
 
   return minProduction === Infinity ? 0 : Math.floor(minProduction);
 };
+
+// Cuántas unidades de un platillo-combo alcanza a armar el inventario
+// actual. A diferencia de un ingrediente dentro de una receta (que se mide
+// en peso/volumen), cada componente de un combo se necesita como unidad
+// entera (1 hamburguesa, 1 refresco, 2 papas) — por eso es una cuenta
+// simple por división, no una conversión de unidades de peso.
+// `components`: [{ recipeId, productId, quantity }]. `prods`/`recs` deben
+// incluir los ingredientes de cada receta (no sirve el listado resumido).
+export const calculateComboCapacity = (components, prods, recs) => {
+  if (!components || components.length === 0) return 0;
+
+  let minCombos = Infinity;
+
+  for (const comp of components) {
+    const qtyNeeded = parseFloat(comp.quantity || 0);
+    if (qtyNeeded <= 0) continue;
+
+    let availableUnits = 0;
+    if (comp.recipeId) {
+      const recipe = recs.find(r => (r.recipeId || r.id) === comp.recipeId);
+      availableUnits = recipe ? calculateMaxProduction(recipe, prods, recs) : 0;
+    } else if (comp.productId) {
+      const product = prods.find(p => (p.productId || p.id) === comp.productId);
+      availableUnits = product ? Math.floor(parseFloat(product.stock || 0)) : 0;
+    } else {
+      continue;
+    }
+
+    const combosFromComponent = Math.floor(availableUnits / qtyNeeded);
+    minCombos = Math.min(minCombos, combosFromComponent);
+  }
+
+  return minCombos === Infinity ? 0 : minCombos;
+};

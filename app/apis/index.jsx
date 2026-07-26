@@ -70,6 +70,7 @@ export const updateIngredient = (id, payload) => api.put(`/ingredient/update/${i
 export const deleteIngredient = (id) => api.delete(`/ingredient/delete/${id}`);
 
 export const getMenuItems = () => api.get("/menu");
+export const getMenuItemById = (id) => api.get(`/menu/${id}`);
 export const createMenuItem = (payload) => api.post("/menu/create", payload);
 export const updateMenuItem = (id, payload) => api.put(`/menu/update/${id}`, payload);
 export const deleteMenuItem = (id) => api.delete(`/menu/delete/${id}`);
@@ -126,6 +127,7 @@ const apis = {
   updateIngredient,
   deleteIngredient,
   getMenuItems,
+  getMenuItemById,
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,

@@ -23,7 +23,7 @@ import apis from "../apis";
 import ScreenHeader from "../components/ScreenHeader";
 import useTheme from "../hooks/useTheme";
 import useGlobal from "../hooks/useGlobal";
-import { calculateMaxProduction } from "../utils/recipeYield";
+import { calculateComboCapacity } from "../utils/recipeYield";
 import { suppressNextLock } from "../services/AppLockGuard";
 
 const MenuScreen = ({ navigation, route }) => {
@@ -55,13 +55,14 @@ const MenuScreen = ({ navigation, route }) => {
   const [activeTab, setActiveTab] = useState("Menu");
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  // Vinculación con receta o producto: al elegir uno, se autocompletan
-  // precio, stock (porciones/unidades disponibles) y descripción.
+  // Componentes del platillo (receta o producto + cantidad cada uno) — un
+  // platillo simple es, con este modelo, un combo de un solo componente.
+  // Al cambiar la lista se recalculan precio (suma), stock (capacidad del
+  // combo) y descripción (nombres).
   const [recipesSummary, setRecipesSummary] = useState([]);
   const [detailedRecipes, setDetailedRecipes] = useState([]);
   const [productsList, setProductsList] = useState([]);
-  const [selectedRecipeId, setSelectedRecipeId] = useState(null);
-  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [components, setComponents] = useState([]);
   const [linkModalVisible, setLinkModalVisible] = useState(false);
   const [linkModalTab, setLinkModalTab] = useState("recipes");
 
@@ -123,8 +124,46 @@ const MenuScreen = ({ navigation, route }) => {
       setProductsList(listProds);
       setRecipesSummary(summaryList);
       setDetailedRecipes(validRecipes);
+      // Se retornan también los valores (no solo el estado) porque loadData
+      // los necesita de inmediato, en la misma pasada, para migrar el
+      // vínculo legado de un ítem — el estado recién asignado con setX no
+      // está disponible todavía dentro de esta misma función async.
+      return { listProds, summaryList, validRecipes };
     } catch (err) {
       console.log("Error loading recipe link data:", err);
+      return { listProds: [], summaryList: [], validRecipes: [] };
+    }
+  };
+
+  // Carga los componentes ya guardados de un platillo, o migra al vuelo el
+  // vínculo simple legado (recipeId/productId sueltos) a un componente
+  // único la primera vez que se abre para editar.
+  const loadComponentsForItem = async (item, linkData) => {
+    const itemId = item.id || item.menuId;
+    try {
+      const { data } = await apis.getMenuItemById(itemId);
+      const existing = data?.menuItem?.components || [];
+      if (existing.length > 0) {
+        setComponents(existing.map((c) => ({
+          recipeId: c.recipeId || null,
+          productId: c.productId || null,
+          quantity: parseFloat(c.quantity || 1),
+          description: c.description || "",
+        })));
+        return;
+      }
+    } catch (err) {
+      console.log("Error loading menu item components:", err);
+    }
+
+    if (item.recipeId) {
+      const recipe = linkData.summaryList.find((r) => (r.recipeId || r.id) === item.recipeId);
+      setComponents([{ recipeId: item.recipeId, productId: null, quantity: 1, description: recipe?.name || item.description || "" }]);
+    } else if (item.productId) {
+      const product = linkData.listProds.find((p) => (p.productId || p.id) === item.productId);
+      setComponents([{ recipeId: null, productId: item.productId, quantity: 1, description: product?.producto || item.description || "" }]);
+    } else {
+      setComponents([]);
     }
   };
 
@@ -133,7 +172,7 @@ const MenuScreen = ({ navigation, route }) => {
     const loadData = async () => {
       await fetchCategories();
       await fetchMenuItems();
-      await fetchRecipeLinkData();
+      const linkData = await fetchRecipeLinkData();
 
       const passedItem = route.params?.item;
       const itemKey = passedItem ? (passedItem.id || passedItem.menuId) : null;
@@ -154,8 +193,7 @@ const MenuScreen = ({ navigation, route }) => {
         setImageUrl(passedItem.imageUrl || "");
         setImagePreviewUri("");
         setStock(passedItem.stock !== undefined ? String(Number(passedItem.stock)) : "0");
-        setSelectedRecipeId(passedItem.recipeId || null);
-        setSelectedProductId(passedItem.productId || null);
+        await loadComponentsForItem(passedItem, linkData);
       } else {
         setEditingId(null);
         setName("");
@@ -164,8 +202,7 @@ const MenuScreen = ({ navigation, route }) => {
         setImageUrl("");
         setImagePreviewUri("");
         setStock("");
-        setSelectedRecipeId(null);
-        setSelectedProductId(null);
+        setComponents([]);
       }
     };
     loadData();
@@ -173,47 +210,77 @@ const MenuScreen = ({ navigation, route }) => {
     return unsubscribe;
   }, [navigation, route]);
 
-  const handleSelectRecipe = (recipeId) => {
-    const recipeDetail = detailedRecipes.find((r) => (r.recipeId || r.id) === recipeId);
-    if (!recipeDetail) return;
-
-    setSelectedRecipeId(recipeId);
-    setSelectedProductId(null);
-    setPrice(Number(recipeDetail.price || 0).toFixed(2));
-    const producible = calculateMaxProduction(recipeDetail, productsList, detailedRecipes);
-    setStock(String(producible));
-    const ingredientNames = (recipeDetail.ingredients || [])
-      .map((ing) => ing.description)
-      .filter(Boolean);
-    setDescription(ingredientNames.join(", "));
-    setLinkModalVisible(false);
+  // Agrega un componente al combo (o suma 1 a su cantidad si ya estaba
+  // agregado). El modal se deja abierto para poder seguir agregando más
+  // componentes sin tener que reabrirlo cada vez.
+  const handleAddComponent = (itemId, isRecipe) => {
+    if (isRecipe) {
+      const recipe = recipesSummary.find((r) => (r.recipeId || r.id) === itemId);
+      if (!recipe) return;
+      setComponents((prev) => {
+        const idx = prev.findIndex((c) => c.recipeId === itemId);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + 1 };
+          return updated;
+        }
+        return [...prev, { recipeId: itemId, productId: null, quantity: 1, description: recipe.name }];
+      });
+    } else {
+      const product = productsList.find((p) => (p.productId || p.id) === itemId);
+      if (!product) return;
+      setComponents((prev) => {
+        const idx = prev.findIndex((c) => c.productId === itemId);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + 1 };
+          return updated;
+        }
+        return [...prev, { recipeId: null, productId: itemId, quantity: 1, description: product.producto }];
+      });
+    }
   };
 
-  const handleSelectProduct = (productId) => {
-    const product = productsList.find((p) => (p.productId || p.id) === productId);
-    if (!product) return;
-
-    setSelectedProductId(productId);
-    setSelectedRecipeId(null);
-    setPrice(Number(product.precioCompra || 0).toFixed(2));
-    setStock(String(Math.floor(parseFloat(product.stock || 0))));
-    setDescription(product.producto || "");
-    setLinkModalVisible(false);
+  const handleUpdateComponentQuantity = (index, delta) => {
+    setComponents((prev) => {
+      const updated = [...prev];
+      const newQty = Math.max(1, (updated[index].quantity || 1) + delta);
+      updated[index] = { ...updated[index], quantity: newQty };
+      return updated;
+    });
   };
 
-  const handleClearLink = () => {
-    setSelectedRecipeId(null);
-    setSelectedProductId(null);
-    setLinkModalVisible(false);
+  const handleRemoveComponent = (index) => {
+    setComponents((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const linkedRecipe = selectedRecipeId
-    ? recipesSummary.find((r) => (r.recipeId || r.id) === selectedRecipeId)
-    : null;
-  const linkedProduct = selectedProductId
-    ? productsList.find((p) => (p.productId || p.id) === selectedProductId)
-    : null;
-  const linkedLabel = linkedRecipe?.name || linkedProduct?.producto || "Ninguna";
+  // Recalcula precio (suma de las partes), stock (capacidad del combo) y
+  // descripción cada vez que cambia la lista de componentes.
+  useEffect(() => {
+    if (components.length === 0) return;
+
+    let totalPrice = 0;
+    components.forEach((c) => {
+      const qty = parseFloat(c.quantity || 0);
+      if (c.recipeId) {
+        const recipe = recipesSummary.find((r) => (r.recipeId || r.id) === c.recipeId);
+        totalPrice += (Number(recipe?.price) || 0) * qty;
+      } else if (c.productId) {
+        const product = productsList.find((p) => (p.productId || p.id) === c.productId);
+        totalPrice += (Number(product?.precioCompra) || 0) * qty;
+      }
+    });
+    setPrice(totalPrice.toFixed(2));
+
+    const capacity = calculateComboCapacity(components, productsList, detailedRecipes);
+    setStock(String(capacity));
+
+    const desc = components
+      .map((c) => (c.quantity > 1 ? `${c.quantity}x ${c.description}` : c.description))
+      .filter(Boolean)
+      .join(", ");
+    setDescription(desc);
+  }, [components, recipesSummary, productsList, detailedRecipes]);
 
   const handleSave = async () => {
     if (!name.trim() || !price) {
@@ -228,8 +295,14 @@ const MenuScreen = ({ navigation, route }) => {
       category: selectedCategory,
       imageUrl: imageUrl || "",
       stock: stock ? parseInt(stock) : 0,
-      recipeId: selectedRecipeId || null,
-      productId: selectedProductId || null,
+      recipeId: null,
+      productId: null,
+      components: components.map((c) => ({
+        recipeId: c.recipeId || null,
+        productId: c.productId || null,
+        quantity: c.quantity,
+        description: c.description,
+      })),
     };
 
     try {
@@ -249,8 +322,7 @@ const MenuScreen = ({ navigation, route }) => {
       setImageUrl("");
       setImagePreviewUri("");
       setStock("");
-      setSelectedRecipeId(null);
-      setSelectedProductId(null);
+      setComponents([]);
       setEditingId(null);
       loadedItemKeyRef.current = undefined;
 
@@ -263,7 +335,7 @@ const MenuScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleEdit = (item) => {
+  const handleEdit = async (item) => {
     loadedItemKeyRef.current = item.id || item.menuId;
     setEditingId(item.id || item.menuId);
     setName(item.name);
@@ -273,9 +345,8 @@ const MenuScreen = ({ navigation, route }) => {
     setImageUrl(item.imageUrl || "");
     setImagePreviewUri("");
     setStock(item.stock ? String(Number(item.stock)) : "0");
-    setSelectedRecipeId(item.recipeId || null);
-    setSelectedProductId(item.productId || null);
     setFilterCategory(item.category);
+    await loadComponentsForItem(item, { summaryList: recipesSummary, listProds: productsList });
     ToastAndroid.show("Editando platillo...", ToastAndroid.SHORT);
   };
 
@@ -477,28 +548,53 @@ const MenuScreen = ({ navigation, route }) => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Vincular con Receta o Producto (opcional)</Text>
+              <Text style={styles.inputLabel}>Componentes del Platillo (opcional)</Text>
               <Text style={styles.linkHint}>
-                Al elegir uno se autocompletan precio, stock y descripción.
+                Agrega recetas o productos (ej. hamburguesa + refresco + papas) — precio, stock y descripción se recalculan solos.
               </Text>
+
+              {components.map((comp, idx) => (
+                <View key={idx} style={[styles.componentRow, { borderColor: theme.border }]}>
+                  <Feather
+                    name={comp.recipeId ? "book-open" : "package"}
+                    size={16}
+                    color={theme.brand}
+                  />
+                  <Text style={styles.componentName} numberOfLines={1}>
+                    {comp.description}
+                  </Text>
+                  <View style={[styles.quantityStepper, { backgroundColor: theme.inputBg }]}>
+                    <TouchableOpacity
+                      style={styles.stepperBtn}
+                      onPress={() => handleUpdateComponentQuantity(idx, -1)}
+                    >
+                      <Feather name="minus" size={13} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                    <Text style={styles.stepperValue}>{comp.quantity}</Text>
+                    <TouchableOpacity
+                      style={styles.stepperBtn}
+                      onPress={() => handleUpdateComponentQuantity(idx, 1)}
+                    >
+                      <Feather name="plus" size={13} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeComponentBtn}
+                    onPress={() => handleRemoveComponent(idx)}
+                  >
+                    <Feather name="trash-2" size={16} color={theme.danger} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
               <TouchableOpacity
-                style={[styles.linkSelectorButton, { backgroundColor: theme.inputBg, borderColor: theme.border }]}
+                style={[styles.addComponentButton, { backgroundColor: theme.inputBg, borderColor: theme.border }]}
                 onPress={() => setLinkModalVisible(true)}
               >
-                <Feather
-                  name={linkedRecipe ? "book-open" : linkedProduct ? "package" : "link"}
-                  size={16}
-                  color={selectedRecipeId || selectedProductId ? theme.brand : theme.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.linkSelectorText,
-                    { color: selectedRecipeId || selectedProductId ? theme.textPrimary : theme.textSecondary },
-                  ]}
-                >
-                  {linkedLabel}
+                <Feather name="plus-circle" size={16} color={theme.brand} />
+                <Text style={[styles.addComponentText, { color: theme.brand }]}>
+                  Agregar Receta o Producto
                 </Text>
-                <Feather name="chevron-right" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -563,8 +659,7 @@ const MenuScreen = ({ navigation, route }) => {
                   setImageUrl("");
                   setImagePreviewUri("");
                   setStock("");
-                  setSelectedRecipeId(null);
-                  setSelectedProductId(null);
+                  setComponents([]);
                   loadedItemKeyRef.current = undefined;
                 }}
               >
@@ -662,7 +757,7 @@ const MenuScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Modal: vincular con Receta o Producto */}
+      {/* Modal: agregar componente (receta o producto) al combo */}
       <Modal
         visible={linkModalVisible}
         animationType="slide"
@@ -672,7 +767,7 @@ const MenuScreen = ({ navigation, route }) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Vincular con Receta o Producto</Text>
+              <Text style={styles.modalTitle}>Agregar Componente</Text>
               <TouchableOpacity onPress={() => setLinkModalVisible(false)}>
                 <Feather name="x" size={22} color={theme.textSecondary} />
               </TouchableOpacity>
@@ -703,11 +798,6 @@ const MenuScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.modalClearRow} onPress={handleClearLink}>
-              <Feather name="slash" size={16} color={theme.danger} />
-              <Text style={[styles.modalClearText, { color: theme.danger }]}>Ninguna (quitar vínculo)</Text>
-            </TouchableOpacity>
-
             <FlatList
               data={linkModalTab === "recipes" ? recipesSummary : productsList}
               keyExtractor={(item, idx) => String(item.recipeId || item.productId || item.id || idx)}
@@ -720,17 +810,19 @@ const MenuScreen = ({ navigation, route }) => {
               renderItem={({ item }) => {
                 const itemId = item.recipeId || item.productId || item.id;
                 const isRecipe = linkModalTab === "recipes";
-                const isActive = isRecipe ? selectedRecipeId === itemId : selectedProductId === itemId;
+                const alreadyAdded = components.some((c) =>
+                  isRecipe ? c.recipeId === itemId : c.productId === itemId
+                );
                 return (
                   <TouchableOpacity
-                    style={[styles.modalItemRow, { borderColor: theme.border }, isActive && { backgroundColor: theme.brand + "14" }]}
-                    onPress={() => (isRecipe ? handleSelectRecipe(itemId) : handleSelectProduct(itemId))}
+                    style={[styles.modalItemRow, { borderColor: theme.border }, alreadyAdded && { backgroundColor: theme.brand + "14" }]}
+                    onPress={() => handleAddComponent(itemId, isRecipe)}
                   >
                     <Text style={styles.modalItemName}>{isRecipe ? item.name : item.producto}</Text>
                     <Text style={[styles.modalItemMeta, { color: theme.textSecondary }]}>
                       {money} {Number(isRecipe ? item.price : item.precioCompra || 0).toFixed(2)}
                     </Text>
-                    {isActive && <Feather name="check-circle" size={18} color={theme.brand} />}
+                    {alreadyAdded && <Feather name="check-circle" size={18} color={theme.brand} />}
                   </TouchableOpacity>
                 );
               }}
@@ -879,19 +971,56 @@ const makeStyles = (t) => StyleSheet.create({
     color: t.textSecondary,
     marginBottom: 10,
   },
-  linkSelectorButton: {
+  componentRow: {
     flexDirection: "row",
     alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  componentName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: t.textPrimary,
+    marginLeft: 10,
+    marginRight: 8,
+  },
+  quantityStepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  stepperBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  stepperValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: t.textPrimary,
+    minWidth: 18,
+    textAlign: "center",
+  },
+  removeComponentBtn: {
+    padding: 4,
+  },
+  addComponentButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 12,
     borderWidth: 1,
-    paddingHorizontal: 16,
+    borderStyle: "dashed",
     paddingVertical: 12,
   },
-  linkSelectorText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 10,
+  addComponentText: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginLeft: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -936,17 +1065,6 @@ const makeStyles = (t) => StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#FFF",
-  },
-  modalClearRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    marginBottom: 8,
-  },
-  modalClearText: {
-    fontSize: 13,
-    fontWeight: "700",
-    marginLeft: 8,
   },
   modalList: {
     flexGrow: 0,

@@ -6,6 +6,15 @@ exports.getAll = asyncHandler(async (req, res) => {
   res.json({ success: true, menu: data });
 });
 
+exports.getById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const menuItem = await menuService.getMenuItemWithComponents(id);
+  if (!menuItem) {
+    return res.status(404).json({ success: false, message: "Platillo no encontrado" });
+  }
+  res.json({ success: true, menuItem });
+});
+
 exports.create = asyncHandler(async (req, res) => {
   const menuItem = await menuService.createMenuItem(req.body);
   res.json({ success: true, menuItem });

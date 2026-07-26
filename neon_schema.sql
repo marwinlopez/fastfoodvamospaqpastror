@@ -140,3 +140,13 @@ CREATE TABLE "menu" (
   "productId" VARCHAR(100) REFERENCES "products"("id"),
   "companyId" VARCHAR(100) DEFAULT 'company-default' REFERENCES "companies"("id")
 );
+
+-- 9b. Componentes de un platillo (combo): varias recetas/productos a la vez
+CREATE TABLE "menu_components" (
+  "id" VARCHAR(100) PRIMARY KEY,
+  "menuId" VARCHAR(100) NOT NULL REFERENCES "menu"("id") ON DELETE CASCADE,
+  "recipeId" VARCHAR(100) REFERENCES "recipes"("id"),
+  "productId" VARCHAR(100) REFERENCES "products"("id"),
+  "quantity" NUMERIC(20, 4) DEFAULT 1,
+  "description" VARCHAR(255)
+);

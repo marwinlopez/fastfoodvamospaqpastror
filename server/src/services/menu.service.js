@@ -1,8 +1,37 @@
 const menuRepository = require("../repositories/menu.repository");
+const menuComponentRepository = require("../repositories/menuComponent.repository");
 
 class MenuService {
   async getAllMenuItems() {
     return await menuRepository.getAll();
+  }
+
+  async getMenuItemWithComponents(id) {
+    const item = await menuRepository.getById(id);
+    if (!item) return null;
+    const components = await menuComponentRepository.getByMenuId(id);
+    return { ...item, components };
+  }
+
+  // Reemplaza todos los componentes de un platillo por la lista dada — el
+  // cliente ya administra la lista completa en memoria (agregar/quitar
+  // filas) y la manda entera al guardar, igual que hace con el resto del
+  // formulario, así que no hace falta un CRUD granular por componente.
+  async setMenuComponents(menuId, components) {
+    await menuComponentRepository.deleteByMenuId(menuId);
+    const list = Array.isArray(components) ? components : [];
+    const rows = list
+      .filter((c) => c.recipeId || c.productId)
+      .map((c) => ({
+        menuId,
+        recipeId: c.recipeId || null,
+        productId: c.recipeId ? null : c.productId || null,
+        quantity: parseFloat(c.quantity || 1),
+        description: c.description || "",
+      }));
+    if (rows.length > 0) {
+      await menuComponentRepository.createBatch(rows);
+    }
   }
 
   async createMenuItem(data) {
@@ -20,7 +49,11 @@ class MenuService {
     if (data.menuId) {
       newMenuItem.menuId = data.menuId;
     }
-    return await menuRepository.create(newMenuItem);
+    const created = await menuRepository.create(newMenuItem);
+    if (data.components !== undefined) {
+      await this.setMenuComponents(created.id, data.components);
+    }
+    return created;
   }
 
   async updateMenuItem(id, data) {
@@ -35,7 +68,11 @@ class MenuService {
     if (data.recipeId !== undefined) updateData.recipeId = data.recipeId || null;
     if (data.productId !== undefined) updateData.productId = data.productId || null;
 
-    return await menuRepository.update(id, updateData);
+    const updated = await menuRepository.update(id, updateData);
+    if (data.components !== undefined) {
+      await this.setMenuComponents(id, data.components);
+    }
+    return updated;
   }
 
   async deleteMenuItem(id) {
