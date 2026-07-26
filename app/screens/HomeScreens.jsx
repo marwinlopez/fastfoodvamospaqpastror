@@ -232,13 +232,15 @@ const HomeScreens = ({ navigation }) => {
           <Text style={[styles.footerTabText, { color: theme.brand }]}>Inicio</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.footerTab}
-          onPress={() => ToastAndroid.show("Pedidos estará disponible pronto", ToastAndroid.SHORT)}
-        >
-          <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
-          <Text style={styles.footerTabText}>Órdenes</Text>
-        </TouchableOpacity>
+        {can("create_orders") && (
+          <TouchableOpacity
+            style={styles.footerTab}
+            onPress={() => ToastAndroid.show("Pedidos estará disponible pronto", ToastAndroid.SHORT)}
+          >
+            <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
+            <Text style={styles.footerTabText}>Órdenes</Text>
+          </TouchableOpacity>
+        )}
 
         {canSeeMenuTab && (
           <TouchableOpacity

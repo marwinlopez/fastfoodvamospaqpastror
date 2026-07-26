@@ -18,18 +18,50 @@ import apis from "../apis";
 import ScreenHeader from "../components/ScreenHeader";
 import useTheme from "../hooks/useTheme";
 
-const AVAILABLE_PERMISSIONS = [
-  { id: "view_menu", label: "Ver el Menú" },
-  { id: "edit_menu", label: "Modificar el Menú" },
-  { id: "view_recipes", label: "Ver Recetas" },
-  { id: "manage_staff", label: "Gestionar Colaboradores" },
-  { id: "manage_roles", label: "Configurar Roles y Accesos" },
-  { id: "view_inventory", label: "Ver Inventario de Productos" },
-  { id: "manage_inventory", label: "Editar Inventario de Productos" },
-  { id: "create_orders", label: "Registrar Pedidos" },
-  { id: "manage_company", label: "Configurar Mi Empresa" },
-  { id: "manage_categories", label: "Gestionar Categorías del Menú" },
-  { id: "manage_units", label: "Gestionar Unidades de Medida" },
+const PERMISSION_GROUPS = [
+  {
+    id: "menu",
+    label: "Menú",
+    permissions: [
+      { id: "view_menu", label: "Ver el Menú" },
+      { id: "edit_menu", label: "Modificar el Menú" },
+    ],
+  },
+  {
+    id: "recipes",
+    label: "Recetas",
+    permissions: [{ id: "view_recipes", label: "Ver Recetas" }],
+  },
+  {
+    id: "inventory",
+    label: "Inventario",
+    permissions: [
+      { id: "view_inventory", label: "Ver Inventario de Productos" },
+      { id: "manage_inventory", label: "Editar Inventario de Productos" },
+    ],
+  },
+  {
+    id: "orders",
+    label: "Pedidos",
+    permissions: [{ id: "create_orders", label: "Registrar Pedidos" }],
+  },
+  {
+    id: "staff",
+    label: "Personal y Roles",
+    permissions: [
+      { id: "manage_staff", label: "Gestionar Colaboradores" },
+      { id: "manage_roles", label: "Configurar Roles y Accesos" },
+    ],
+  },
+  {
+    id: "maintenance",
+    label: "Mantenimiento",
+    permissions: [
+      { id: "manage_company", label: "Configurar Mi Empresa" },
+      { id: "manage_categories", label: "Gestionar Categorías del Menú" },
+      { id: "manage_units", label: "Gestionar Unidades de Medida" },
+    ],
+  },
 ];
 
 const RoleSettingsScreen = ({ navigation }) => {
@@ -67,6 +99,23 @@ const RoleSettingsScreen = ({ navigation }) => {
       setSelectedPermissions(selectedPermissions.filter(id => id !== permId));
     } else {
       setSelectedPermissions([...selectedPermissions, permId]);
+    }
+  };
+
+  const getGroupState = (group) => {
+    const ids = group.permissions.map((p) => p.id);
+    const selectedCount = ids.filter((id) => selectedPermissions.includes(id)).length;
+    if (selectedCount === 0) return "none";
+    if (selectedCount === ids.length) return "all";
+    return "some";
+  };
+
+  const handleToggleGroup = (group) => {
+    const ids = group.permissions.map((p) => p.id);
+    if (getGroupState(group) === "all") {
+      setSelectedPermissions(selectedPermissions.filter((id) => !ids.includes(id)));
+    } else {
+      setSelectedPermissions([...new Set([...selectedPermissions, ...ids])]);
     }
   };
 
@@ -174,28 +223,54 @@ const RoleSettingsScreen = ({ navigation }) => {
               />
             </View>
 
-            {/* Checklist de Permisos */}
+            {/* Árbol de Permisos */}
             <View style={styles.permissionsListGroup}>
               <Text style={styles.inputLabel}>Permisos Permitidos</Text>
-              {AVAILABLE_PERMISSIONS.map((perm) => {
-                const isChecked = selectedPermissions.includes(perm.id);
+              {PERMISSION_GROUPS.map((group) => {
+                const groupState = getGroupState(group);
                 return (
-                  <TouchableOpacity
-                    key={perm.id}
-                    style={styles.checkboxRow}
-                    activeOpacity={0.7}
-                    onPress={() => handleTogglePermission(perm.id)}
-                  >
-                    <View
-                      style={[
-                        styles.checkbox,
-                        isChecked ? { backgroundColor: theme.brand, borderColor: theme.brand } : styles.checkboxUnchecked
-                      ]}
+                  <View key={group.id} style={styles.permissionGroup}>
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      activeOpacity={0.7}
+                      onPress={() => handleToggleGroup(group)}
                     >
-                      {isChecked && <Feather name="check" size={14} color="#FFF" />}
-                    </View>
-                    <Text style={styles.checkboxLabel}>{perm.label}</Text>
-                  </TouchableOpacity>
+                      <View
+                        style={[
+                          styles.checkbox,
+                          groupState !== "none"
+                            ? { backgroundColor: theme.brand, borderColor: theme.brand }
+                            : styles.checkboxUnchecked
+                        ]}
+                      >
+                        {groupState === "all" && <Feather name="check" size={14} color="#FFF" />}
+                        {groupState === "some" && <Feather name="minus" size={14} color="#FFF" />}
+                      </View>
+                      <Text style={styles.checkboxGroupLabel}>{group.label}</Text>
+                    </TouchableOpacity>
+
+                    {group.permissions.map((perm) => {
+                      const isChecked = selectedPermissions.includes(perm.id);
+                      return (
+                        <TouchableOpacity
+                          key={perm.id}
+                          style={[styles.checkboxRow, styles.checkboxRowChild]}
+                          activeOpacity={0.7}
+                          onPress={() => handleTogglePermission(perm.id)}
+                        >
+                          <View
+                            style={[
+                              styles.checkbox,
+                              isChecked ? { backgroundColor: theme.brand, borderColor: theme.brand } : styles.checkboxUnchecked
+                            ]}
+                          >
+                            {isChecked && <Feather name="check" size={14} color="#FFF" />}
+                          </View>
+                          <Text style={styles.checkboxLabel}>{perm.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 );
               })}
             </View>
@@ -332,10 +407,20 @@ const makeStyles = (t) => StyleSheet.create({
   permissionsListGroup: {
     marginBottom: 20,
   },
+  permissionGroup: {
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: t.border,
+    paddingBottom: 6,
+  },
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 8,
+  },
+  checkboxRowChild: {
+    paddingLeft: 28,
+    paddingVertical: 6,
   },
   checkbox: {
     width: 20,
@@ -349,6 +434,11 @@ const makeStyles = (t) => StyleSheet.create({
   checkboxUnchecked: {
     borderColor: t.border,
     backgroundColor: t.surface,
+  },
+  checkboxGroupLabel: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: t.textPrimary,
   },
   checkboxLabel: {
     fontSize: 13,

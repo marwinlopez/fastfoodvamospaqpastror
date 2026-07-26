@@ -138,13 +138,15 @@ const SettingsScreen = ({ navigation }) => {
             <Text style={styles.footerTabText}>Inicio</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.footerTab}
-            onPress={() => alert("Pedidos estará disponible pronto.")}
-          >
-            <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
-            <Text style={styles.footerTabText}>Órdenes</Text>
-          </TouchableOpacity>
+          {can("create_orders") && (
+            <TouchableOpacity
+              style={styles.footerTab}
+              onPress={() => alert("Pedidos estará disponible pronto.")}
+            >
+              <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
+              <Text style={styles.footerTabText}>Órdenes</Text>
+            </TouchableOpacity>
+          )}
 
           {canSeeMenuTab && (
             <TouchableOpacity
