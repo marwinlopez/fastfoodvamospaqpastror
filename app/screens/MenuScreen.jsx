@@ -231,6 +231,7 @@ const MenuScreen = ({ navigation, route }) => {
       recipeId: selectedRecipeId || null,
       productId: selectedProductId || null,
     };
+    console.log("[guardar] payload:", JSON.stringify(payload), "editingId:", editingId);
 
     try {
       setLoading(true);
