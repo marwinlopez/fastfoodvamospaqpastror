@@ -14,6 +14,7 @@ import useGlobal from "../hooks/useGlobal";
 import useTheme from "../hooks/useTheme";
 import usePermissions from "../hooks/usePermissions";
 import apis from "../apis";
+import EmptyState from "../components/EmptyState";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const MONTHS = [
@@ -107,10 +108,20 @@ const HomeScreens = ({ navigation }) => {
   const canSeeMenuTab = can("view_menu") || can("edit_menu");
 
   const statItems = [
-    { label: "Inventario", value: stats.products, icon: "package" },
+    {
+      label: "Inventario",
+      value: stats.products,
+      icon: "package",
+      permissions: ["view_inventory", "manage_inventory"],
+    },
     { label: "Recetas", value: stats.recipes, icon: "list" },
-    { label: "Menú", value: stats.menu, icon: "book-open" },
-  ];
+    {
+      label: "Menú",
+      value: stats.menu,
+      icon: "book-open",
+      permissions: ["view_menu", "edit_menu"],
+    },
+  ].filter((s) => !s.permissions || s.permissions.some(can));
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
@@ -176,6 +187,14 @@ const HomeScreens = ({ navigation }) => {
 
         {/* Accesos rápidos */}
         <Text style={styles.sectionTitle}>Accesos Rápidos</Text>
+        {quickActions.length === 0 ? (
+          <EmptyState
+            theme={theme}
+            icon="lock"
+            title="Sin accesos adicionales"
+            description="Tu rol no tiene accesos rápidos asignados. Contacta a un administrador si necesitas alguno."
+          />
+        ) : (
         <View style={styles.gridContainer}>
           {quickActions.map((action) => (
             <TouchableOpacity
@@ -197,6 +216,7 @@ const HomeScreens = ({ navigation }) => {
             </TouchableOpacity>
           ))}
         </View>
+        )}
       </ScrollView>
 
       {/* Footer Navigation */}

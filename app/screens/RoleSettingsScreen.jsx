@@ -26,6 +26,9 @@ const AVAILABLE_PERMISSIONS = [
   { id: "view_inventory", label: "Ver Inventario de Productos" },
   { id: "manage_inventory", label: "Editar Inventario de Productos" },
   { id: "create_orders", label: "Registrar Pedidos" },
+  { id: "manage_company", label: "Configurar Mi Empresa" },
+  { id: "manage_categories", label: "Gestionar Categorías del Menú" },
+  { id: "manage_units", label: "Gestionar Unidades de Medida" },
 ];
 
 const RoleSettingsScreen = ({ navigation }) => {

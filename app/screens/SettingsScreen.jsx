@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import ScreenHeader from "../components/ScreenHeader";
+import EmptyState from "../components/EmptyState";
 import useGlobal from "../hooks/useGlobal";
 import useTheme from "../hooks/useTheme";
 import usePermissions from "../hooks/usePermissions";
@@ -33,6 +34,7 @@ const SettingsScreen = ({ navigation }) => {
       description: "Nombre, moneda, apariencia y datos del negocio",
       icon: "briefcase",
       url: "CompanySettingsScreen",
+      permissions: ["manage_company"],
     },
     {
       id: 1,
@@ -40,6 +42,7 @@ const SettingsScreen = ({ navigation }) => {
       description: "Agregar, editar y eliminar categorías de la carta",
       icon: "grid",
       url: "CategorySettingsScreen",
+      permissions: ["manage_categories"],
     },
     {
       id: 2,
@@ -47,6 +50,7 @@ const SettingsScreen = ({ navigation }) => {
       description: "Gestionar unidades físicas (Gramos, Litros, etc.)",
       icon: "compass",
       url: "UnitSettingsScreen",
+      permissions: ["manage_units"],
     },
     {
       id: 3,
@@ -101,54 +105,62 @@ const SettingsScreen = ({ navigation }) => {
             </TouchableOpacity>
           ))}
 
-          <TouchableOpacity
-            style={[styles.optionCard, styles.logoutCard]}
-            activeOpacity={0.7}
-            onPress={handleLogout}
-          >
-            <View style={[styles.iconWrapper, { backgroundColor: theme.danger + "1A" }]}>
-              <Feather name="log-out" size={22} color={theme.danger} />
-            </View>
-            <View style={styles.textWrapper}>
-              <Text style={[styles.optionTitle, { color: theme.danger }]}>Cerrar sesión</Text>
-              <Text style={styles.optionDescription}>Salir de tu cuenta en este dispositivo</Text>
-            </View>
-          </TouchableOpacity>
+          {options.length === 0 && (
+            <EmptyState
+              theme={theme}
+              icon="lock"
+              title="Sin opciones de configuración"
+              description="Tu rol no tiene accesos de mantenimiento asignados. Contacta a un administrador si necesitas alguno."
+            />
+          )}
         </View>
       </ScrollView>
 
-      {/* Footer Navigation */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.footerTab}
-          onPress={() => navigation.navigate("HomeScreen")}
-        >
-          <Feather name="home" size={20} color={theme.textSecondary} />
-          <Text style={styles.footerTabText}>Inicio</Text>
-        </TouchableOpacity>
+      {/* Barra fija inferior: cerrar sesión + navegación */}
+      <View style={styles.bottomFixed}>
+        <View style={[styles.logoutBar, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            activeOpacity={0.7}
+            onPress={handleLogout}
+          >
+            <Feather name="log-out" size={18} color={theme.danger} />
+            <Text style={[styles.logoutButtonText, { color: theme.danger }]}>Cerrar sesión</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          style={styles.footerTab}
-          onPress={() => alert("Pedidos estará disponible pronto.")}
-        >
-          <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
-          <Text style={styles.footerTabText}>Órdenes</Text>
-        </TouchableOpacity>
-
-        {canSeeMenuTab && (
+        <View style={styles.footer}>
           <TouchableOpacity
             style={styles.footerTab}
-            onPress={() => navigation.navigate("MenuScreen")}
+            onPress={() => navigation.navigate("HomeScreen")}
           >
-            <Feather name="book-open" size={20} color={theme.textSecondary} />
-            <Text style={styles.footerTabText}>Menú</Text>
+            <Feather name="home" size={20} color={theme.textSecondary} />
+            <Text style={styles.footerTabText}>Inicio</Text>
           </TouchableOpacity>
-        )}
 
-        <TouchableOpacity style={styles.footerTab}>
-          <Feather name="settings" size={20} color={theme.brand} />
-          <Text style={[styles.footerTabText, { color: theme.brand }]}>Ajustes</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.footerTab}
+            onPress={() => alert("Pedidos estará disponible pronto.")}
+          >
+            <Feather name="shopping-bag" size={20} color={theme.textSecondary} />
+            <Text style={styles.footerTabText}>Órdenes</Text>
+          </TouchableOpacity>
+
+          {canSeeMenuTab && (
+            <TouchableOpacity
+              style={styles.footerTab}
+              onPress={() => navigation.navigate("MenuScreen")}
+            >
+              <Feather name="book-open" size={20} color={theme.textSecondary} />
+              <Text style={styles.footerTabText}>Menú</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity style={styles.footerTab}>
+            <Feather name="settings" size={20} color={theme.brand} />
+            <Text style={[styles.footerTabText, { color: theme.brand }]}>Ajustes</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -162,7 +174,7 @@ const makeStyles = (t) => StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 90,
+    paddingBottom: 150,
   },
   listContainer: {
     marginBottom: 20,
@@ -182,8 +194,29 @@ const makeStyles = (t) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  logoutCard: {
-    marginTop: 4,
+  bottomFixed: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  logoutBar: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: t.danger + "14",
+  },
+  logoutButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginLeft: 8,
   },
   iconWrapper: {
     width: 46,
@@ -207,10 +240,6 @@ const makeStyles = (t) => StyleSheet.create({
     color: t.textSecondary,
   },
   footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     height: 64,
     backgroundColor: t.headerBg,
     flexDirection: "row",
