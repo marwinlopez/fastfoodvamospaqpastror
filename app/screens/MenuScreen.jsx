@@ -303,17 +303,39 @@ const MenuScreen = ({ navigation, route }) => {
 
       setUploadingImage(true);
 
-      const context = ImageManipulator.manipulate(asset.uri);
-      context.resize({ width: 1000 });
-      const renderedImage = await context.renderAsync();
-      const manipulated = await renderedImage.saveAsync({
-        compress: 0.6,
+      // Encadenado en una sola expresión: resize() debe aplicarse sobre el
+      // mismo contexto que se renderiza — llamarlo suelto y luego renderizar
+      // el contexto original puede terminar ignorando el resize.
+      const renderedImage = await ImageManipulator.manipulate(asset.uri)
+        .resize({ width: 1000 })
+        .renderAsync();
+      let manipulated = await renderedImage.saveAsync({
+        compress: 0.5,
         format: SaveFormat.JPEG,
         base64: true,
       });
 
       if (!manipulated.base64) {
         ToastAndroid.show("No se pudo procesar la imagen seleccionada", ToastAndroid.SHORT);
+        return;
+      }
+
+      // Resguardo: si aun así queda pesada (foto muy compleja), se
+      // recomprime una vez más antes de rendirse — evita un 413 silencioso
+      // del backend por payload demasiado grande.
+      if (manipulated.base64.length > 3 * 1024 * 1024) {
+        const secondPass = await ImageManipulator.manipulate(renderedImage.uri)
+          .resize({ width: 700 })
+          .renderAsync();
+        manipulated = await secondPass.saveAsync({
+          compress: 0.35,
+          format: SaveFormat.JPEG,
+          base64: true,
+        });
+      }
+
+      if (manipulated.base64.length > 4 * 1024 * 1024) {
+        ToastAndroid.show("La imagen sigue siendo muy pesada, prueba con otra", ToastAndroid.SHORT);
         return;
       }
 
