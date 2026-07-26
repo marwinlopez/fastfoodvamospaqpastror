@@ -136,5 +136,7 @@ CREATE TABLE "menu" (
   "imageUrl" TEXT,
   "stock" INTEGER DEFAULT 0,
   "isActive" BOOLEAN DEFAULT TRUE,
+  "recipeId" VARCHAR(100) REFERENCES "recipes"("id"),
+  "productId" VARCHAR(100) REFERENCES "products"("id"),
   "companyId" VARCHAR(100) DEFAULT 'company-default' REFERENCES "companies"("id")
 );

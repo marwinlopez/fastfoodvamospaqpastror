@@ -14,6 +14,8 @@ class MenuService {
       imageUrl: data.imageUrl || "",
       stock: parseInt(data.stock !== undefined ? data.stock : 0),
       isActive: data.isActive !== undefined ? data.isActive : true,
+      recipeId: data.recipeId || null,
+      productId: data.productId || null,
     };
     if (data.menuId) {
       newMenuItem.menuId = data.menuId;
@@ -30,6 +32,8 @@ class MenuService {
     if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
     if (data.stock !== undefined) updateData.stock = parseInt(data.stock);
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.recipeId !== undefined) updateData.recipeId = data.recipeId || null;
+    if (data.productId !== undefined) updateData.productId = data.productId || null;
 
     return await menuRepository.update(id, updateData);
   }

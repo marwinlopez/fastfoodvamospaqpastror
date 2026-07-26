@@ -13,15 +13,21 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import apis from "../apis";
 import ScreenHeader from "../components/ScreenHeader";
 import useTheme from "../hooks/useTheme";
+import useGlobal from "../hooks/useGlobal";
+import { calculateMaxProduction } from "../utils/recipeYield";
 
 const MenuScreen = ({ navigation, route }) => {
   const theme = useTheme();
+  const { company } = useGlobal();
+  const money = company?.currencySymbol || "$";
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -36,6 +42,17 @@ const MenuScreen = ({ navigation, route }) => {
   const [imageUrl, setImageUrl] = useState("");
   const [stock, setStock] = useState("");
   const [activeTab, setActiveTab] = useState("Menu");
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Vinculación con receta o producto: al elegir uno, se autocompletan
+  // precio, stock (porciones/unidades disponibles) y descripción.
+  const [recipesSummary, setRecipesSummary] = useState([]);
+  const [detailedRecipes, setDetailedRecipes] = useState([]);
+  const [productsList, setProductsList] = useState([]);
+  const [selectedRecipeId, setSelectedRecipeId] = useState(null);
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [linkModalVisible, setLinkModalVisible] = useState(false);
+  const [linkModalTab, setLinkModalTab] = useState("recipes");
 
   // Filter category state
   const [filterCategory, setFilterCategory] = useState("");
@@ -72,11 +89,40 @@ const MenuScreen = ({ navigation, route }) => {
     }
   };
 
+  // Recetas y productos para la vinculación receta → platillo. Se necesita
+  // el detalle completo (con ingredientes) de cada receta, no el listado
+  // resumido, tanto para calcular porciones producibles como para armar
+  // la descripción a partir de los ingredientes.
+  const fetchRecipeLinkData = async () => {
+    try {
+      const [prodRes, recipeRes] = await Promise.all([
+        apis.allProducts().catch(() => null),
+        apis.recipeAll().catch(() => null),
+      ]);
+      const listProds = prodRes?.data?.data || prodRes?.data?.products || (Array.isArray(prodRes?.data) ? prodRes.data : []);
+      const summaryList = recipeRes?.data?.recipes || (Array.isArray(recipeRes?.data) ? recipeRes.data : []);
+
+      const detailedResults = await Promise.all(
+        summaryList.map((r) =>
+          apis.recipeForId(r.recipeId || r.id).then((res) => res?.data?.recipe).catch(() => null)
+        )
+      );
+      const validRecipes = detailedResults.filter(Boolean);
+
+      setProductsList(listProds);
+      setRecipesSummary(summaryList);
+      setDetailedRecipes(validRecipes);
+    } catch (err) {
+      console.log("Error loading recipe link data:", err);
+    }
+  };
+
   // Cargar datos al enfocar la pantalla
   useEffect(() => {
     const loadData = async () => {
       await fetchCategories();
       await fetchMenuItems();
+      await fetchRecipeLinkData();
 
       const passedItem = route.params?.item;
       if (passedItem) {
@@ -87,6 +133,8 @@ const MenuScreen = ({ navigation, route }) => {
         setSelectedCategory(passedItem.category);
         setImageUrl(passedItem.imageUrl || "");
         setStock(passedItem.stock !== undefined ? String(Number(passedItem.stock)) : "0");
+        setSelectedRecipeId(passedItem.recipeId || null);
+        setSelectedProductId(passedItem.productId || null);
       } else {
         setEditingId(null);
         setName("");
@@ -94,12 +142,56 @@ const MenuScreen = ({ navigation, route }) => {
         setDescription("");
         setImageUrl("");
         setStock("");
+        setSelectedRecipeId(null);
+        setSelectedProductId(null);
       }
     };
     loadData();
     const unsubscribe = navigation.addListener("focus", loadData);
     return unsubscribe;
   }, [navigation, route]);
+
+  const handleSelectRecipe = (recipeId) => {
+    const recipeDetail = detailedRecipes.find((r) => (r.recipeId || r.id) === recipeId);
+    if (!recipeDetail) return;
+
+    setSelectedRecipeId(recipeId);
+    setSelectedProductId(null);
+    setPrice(Number(recipeDetail.price || 0).toFixed(2));
+    const producible = calculateMaxProduction(recipeDetail, productsList, detailedRecipes);
+    setStock(String(producible));
+    const ingredientNames = (recipeDetail.ingredients || [])
+      .map((ing) => ing.description)
+      .filter(Boolean);
+    setDescription(ingredientNames.join(", "));
+    setLinkModalVisible(false);
+  };
+
+  const handleSelectProduct = (productId) => {
+    const product = productsList.find((p) => (p.productId || p.id) === productId);
+    if (!product) return;
+
+    setSelectedProductId(productId);
+    setSelectedRecipeId(null);
+    setPrice(Number(product.precioCompra || 0).toFixed(2));
+    setStock(String(Math.floor(parseFloat(product.stock || 0))));
+    setDescription(product.producto || "");
+    setLinkModalVisible(false);
+  };
+
+  const handleClearLink = () => {
+    setSelectedRecipeId(null);
+    setSelectedProductId(null);
+    setLinkModalVisible(false);
+  };
+
+  const linkedRecipe = selectedRecipeId
+    ? recipesSummary.find((r) => (r.recipeId || r.id) === selectedRecipeId)
+    : null;
+  const linkedProduct = selectedProductId
+    ? productsList.find((p) => (p.productId || p.id) === selectedProductId)
+    : null;
+  const linkedLabel = linkedRecipe?.name || linkedProduct?.producto || "Ninguna";
 
   const handleSave = async () => {
     if (!name.trim() || !price) {
@@ -114,6 +206,8 @@ const MenuScreen = ({ navigation, route }) => {
       category: selectedCategory,
       imageUrl: imageUrl || "",
       stock: stock ? parseInt(stock) : 0,
+      recipeId: selectedRecipeId || null,
+      productId: selectedProductId || null,
     };
 
     try {
@@ -132,6 +226,8 @@ const MenuScreen = ({ navigation, route }) => {
       setDescription("");
       setImageUrl("");
       setStock("");
+      setSelectedRecipeId(null);
+      setSelectedProductId(null);
       setEditingId(null);
 
       navigation.navigate("ProductsSaleScreen");
@@ -151,6 +247,8 @@ const MenuScreen = ({ navigation, route }) => {
     setSelectedCategory(item.category);
     setImageUrl(item.imageUrl || "");
     setStock(item.stock ? String(Number(item.stock)) : "0");
+    setSelectedRecipeId(item.recipeId || null);
+    setSelectedProductId(item.productId || null);
     setFilterCategory(item.category);
     ToastAndroid.show("Editando platillo...", ToastAndroid.SHORT);
   };
@@ -183,8 +281,43 @@ const MenuScreen = ({ navigation, route }) => {
     );
   };
 
-  const toggleDemoImage = () => {
-    ToastAndroid.show("Pega una URL de imagen en el campo correspondiente", ToastAndroid.SHORT);
+  const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      ToastAndroid.show("Necesitamos acceso a tus fotos para subir una imagen", ToastAndroid.SHORT);
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.5,
+      base64: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+
+    const asset = result.assets[0];
+    if (!asset.base64) {
+      ToastAndroid.show("No se pudo leer la imagen seleccionada", ToastAndroid.SHORT);
+      return;
+    }
+
+    const mimeType = asset.mimeType || "image/jpeg";
+    const dataUri = `data:${mimeType};base64,${asset.base64}`;
+
+    setUploadingImage(true);
+    try {
+      const { data } = await apis.uploadImage(dataUri, name || "platillo");
+      if (data?.success && data?.url) {
+        setImageUrl(data.url);
+      } else {
+        ToastAndroid.show("Error al subir la imagen", ToastAndroid.SHORT);
+      }
+    } catch (error) {
+      console.log("Error uploading image:", error);
+      ToastAndroid.show("Error al subir la imagen", ToastAndroid.SHORT);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const filteredItems = menuItems.filter(item => item.category === filterCategory);
@@ -250,9 +383,15 @@ const MenuScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={[styles.imageUploadBox, { backgroundColor: theme.brand + "0D", borderColor: theme.brand + "66" }]}
               activeOpacity={0.7}
-              onPress={toggleDemoImage}
+              onPress={handlePickImage}
+              disabled={uploadingImage}
             >
-              {imageUrl ? (
+              {uploadingImage ? (
+                <View style={styles.imagePlaceholder}>
+                  <ActivityIndicator size="small" color={theme.brand} />
+                  <Text style={[styles.uploadText, { marginTop: 8 }]}>Subiendo imagen...</Text>
+                </View>
+              ) : imageUrl ? (
                 <View style={styles.uploadedImageContainer}>
                   <Image source={{ uri: imageUrl }} style={styles.uploadedImage} />
                   <View style={styles.imageOverlay}>
@@ -280,6 +419,32 @@ const MenuScreen = ({ navigation, route }) => {
                 value={name}
                 onChangeText={setName}
               />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Vincular con Receta o Producto (opcional)</Text>
+              <Text style={styles.linkHint}>
+                Al elegir uno se autocompletan precio, stock y descripción.
+              </Text>
+              <TouchableOpacity
+                style={[styles.linkSelectorButton, { backgroundColor: theme.inputBg, borderColor: theme.border }]}
+                onPress={() => setLinkModalVisible(true)}
+              >
+                <Feather
+                  name={linkedRecipe ? "book-open" : linkedProduct ? "package" : "link"}
+                  size={16}
+                  color={selectedRecipeId || selectedProductId ? theme.brand : theme.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.linkSelectorText,
+                    { color: selectedRecipeId || selectedProductId ? theme.textPrimary : theme.textSecondary },
+                  ]}
+                >
+                  {linkedLabel}
+                </Text>
+                <Feather name="chevron-right" size={18} color={theme.textSecondary} />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
@@ -321,9 +486,10 @@ const MenuScreen = ({ navigation, route }) => {
 
             {/* Guardar Button */}
             <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: theme.brand }]}
+              style={[styles.saveButton, { backgroundColor: theme.brand }, uploadingImage && { opacity: 0.6 }]}
               onPress={handleSave}
               activeOpacity={0.8}
+              disabled={uploadingImage}
             >
               <Feather name="save" size={18} color="#FFFFFF" style={styles.buttonIcon} />
               <Text style={styles.saveButtonText}>
@@ -340,6 +506,9 @@ const MenuScreen = ({ navigation, route }) => {
                   setPrice("");
                   setDescription("");
                   setImageUrl("");
+                  setStock("");
+                  setSelectedRecipeId(null);
+                  setSelectedProductId(null);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Cancelar Edición</Text>
@@ -435,6 +604,83 @@ const MenuScreen = ({ navigation, route }) => {
           <Text style={styles.footerTabText}>Ajustes</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal: vincular con Receta o Producto */}
+      <Modal
+        visible={linkModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setLinkModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Vincular con Receta o Producto</Text>
+              <TouchableOpacity onPress={() => setLinkModalVisible(false)}>
+                <Feather name="x" size={22} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalTabsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.modalTab,
+                  linkModalTab === "recipes" ? { backgroundColor: theme.brand } : { backgroundColor: theme.inputBg },
+                ]}
+                onPress={() => setLinkModalTab("recipes")}
+              >
+                <Text style={linkModalTab === "recipes" ? styles.modalTabTextActive : styles.modalTabText}>
+                  Recetas
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalTab,
+                  linkModalTab === "products" ? { backgroundColor: theme.brand } : { backgroundColor: theme.inputBg },
+                ]}
+                onPress={() => setLinkModalTab("products")}
+              >
+                <Text style={linkModalTab === "products" ? styles.modalTabTextActive : styles.modalTabText}>
+                  Productos
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.modalClearRow} onPress={handleClearLink}>
+              <Feather name="slash" size={16} color={theme.danger} />
+              <Text style={[styles.modalClearText, { color: theme.danger }]}>Ninguna (quitar vínculo)</Text>
+            </TouchableOpacity>
+
+            <FlatList
+              data={linkModalTab === "recipes" ? recipesSummary : productsList}
+              keyExtractor={(item, idx) => String(item.recipeId || item.productId || item.id || idx)}
+              style={styles.modalList}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>
+                  {linkModalTab === "recipes" ? "No hay recetas registradas" : "No hay productos registrados"}
+                </Text>
+              }
+              renderItem={({ item }) => {
+                const itemId = item.recipeId || item.productId || item.id;
+                const isRecipe = linkModalTab === "recipes";
+                const isActive = isRecipe ? selectedRecipeId === itemId : selectedProductId === itemId;
+                return (
+                  <TouchableOpacity
+                    style={[styles.modalItemRow, { borderColor: theme.border }, isActive && { backgroundColor: theme.brand + "14" }]}
+                    onPress={() => (isRecipe ? handleSelectRecipe(itemId) : handleSelectProduct(itemId))}
+                  >
+                    <Text style={styles.modalItemName}>{isRecipe ? item.name : item.producto}</Text>
+                    <Text style={[styles.modalItemMeta, { color: theme.textSecondary }]}>
+                      {money} {Number(isRecipe ? item.price : item.precioCompra || 0).toFixed(2)}
+                    </Text>
+                    {isActive && <Feather name="check-circle" size={18} color={theme.brand} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -570,6 +816,102 @@ const makeStyles = (t) => StyleSheet.create({
     fontWeight: "700",
     color: t.textPrimary,
     marginBottom: 6,
+  },
+  linkHint: {
+    fontSize: 11,
+    color: t.textSecondary,
+    marginBottom: 10,
+  },
+  linkSelectorButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  linkSelectorText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: "80%",
+    minHeight: "50%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: t.textPrimary,
+  },
+  modalTabsRow: {
+    flexDirection: "row",
+    marginBottom: 12,
+  },
+  modalTab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+    marginRight: 8,
+  },
+  modalTabText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: t.textSecondary,
+  },
+  modalTabTextActive: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFF",
+  },
+  modalClearRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  modalClearText: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginLeft: 8,
+  },
+  modalList: {
+    flexGrow: 0,
+  },
+  modalItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderRadius: 10,
+  },
+  modalItemName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: t.textPrimary,
+  },
+  modalItemMeta: {
+    fontSize: 12,
+    fontWeight: "700",
+    marginRight: 8,
   },
   input: {
     backgroundColor: t.inputBg,

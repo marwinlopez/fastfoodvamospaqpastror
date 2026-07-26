@@ -8,8 +8,8 @@ const app = express();
 const routes = require("./routes");
 
 app.use(cors());
-app.use(bp.urlencoded({ extended: true }));
-app.use(bp.json());
+app.use(bp.urlencoded({ extended: true, limit: '10mb' }));
+app.use(bp.json({ limit: '10mb' }));
 app.use(morgan('dev'))
 app.use(express.urlencoded({ extended: false }));
 

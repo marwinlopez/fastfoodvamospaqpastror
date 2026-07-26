@@ -101,6 +101,10 @@ export const deleteRole = (id) => api.delete(`/role/delete/${id}`);
 export const getCompany = () => api.get("/company");
 export const updateCompany = (payload) => api.put("/company/update", payload);
 
+// Subida de imágenes (base64 data URI) a almacenamiento en la nube
+export const uploadImage = (dataUri, filename) =>
+  api.post("/upload", { image: dataUri, filename });
+
 const apis = {
   setAuthToken,
   setUnauthorizedHandler,
@@ -142,6 +146,7 @@ const apis = {
   deleteRole,
   getCompany,
   updateCompany,
+  uploadImage,
 };
 
 export default apis;

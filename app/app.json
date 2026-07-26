@@ -51,7 +51,13 @@
     },
     "plugins": [
       "expo-camera",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La app necesita acceso a tus fotos para subir imágenes de productos y platillos."
+        }
+      ]
     ]
   }
 }
