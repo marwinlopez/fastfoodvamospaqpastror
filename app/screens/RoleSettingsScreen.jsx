@@ -21,6 +21,7 @@ import useTheme from "../hooks/useTheme";
 const AVAILABLE_PERMISSIONS = [
   { id: "view_menu", label: "Ver el Menú" },
   { id: "edit_menu", label: "Modificar el Menú" },
+  { id: "view_recipes", label: "Ver Recetas" },
   { id: "manage_staff", label: "Gestionar Colaboradores" },
   { id: "manage_roles", label: "Configurar Roles y Accesos" },
   { id: "view_inventory", label: "Ver Inventario de Productos" },

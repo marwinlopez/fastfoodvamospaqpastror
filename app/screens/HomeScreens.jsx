@@ -82,6 +82,7 @@ const HomeScreens = ({ navigation }) => {
       color: "#059669",
       bg: "#E2F6EF",
       url: "RecipesScreen",
+      permissions: ["view_recipes"],
     },
     {
       id: 3,
@@ -114,7 +115,12 @@ const HomeScreens = ({ navigation }) => {
       icon: "package",
       permissions: ["view_inventory", "manage_inventory"],
     },
-    { label: "Recetas", value: stats.recipes, icon: "list" },
+    {
+      label: "Recetas",
+      value: stats.recipes,
+      icon: "list",
+      permissions: ["view_recipes"],
+    },
     {
       label: "Menú",
       value: stats.menu,
