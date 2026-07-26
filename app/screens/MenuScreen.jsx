@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import apis from "../apis";
 import ScreenHeader from "../components/ScreenHeader";
 import useTheme from "../hooks/useTheme";
@@ -282,30 +283,41 @@ const MenuScreen = ({ navigation, route }) => {
   };
 
   const handlePickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      ToastAndroid.show("Necesitamos acceso a tus fotos para subir una imagen", ToastAndroid.SHORT);
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.5,
-      base64: true,
-    });
-    if (result.canceled || !result.assets?.length) return;
-
-    const asset = result.assets[0];
-    if (!asset.base64) {
-      ToastAndroid.show("No se pudo leer la imagen seleccionada", ToastAndroid.SHORT);
-      return;
-    }
-
-    const mimeType = asset.mimeType || "image/jpeg";
-    const dataUri = `data:${mimeType};base64,${asset.base64}`;
-
-    setUploadingImage(true);
     try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        ToastAndroid.show("Necesitamos acceso a tus fotos para subir una imagen", ToastAndroid.SHORT);
+        return;
+      }
+
+      // Sin base64 aquí: una foto de cámara sin redimensionar puede pesar
+      // varios MB y, convertida a base64 completa en memoria, puede tumbar
+      // la app en el teléfono. Se pide la imagen liviana ya redimensionada
+      // más abajo con expo-image-manipulator.
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+
+      setUploadingImage(true);
+
+      const context = ImageManipulator.manipulate(asset.uri);
+      context.resize({ width: 1000 });
+      const renderedImage = await context.renderAsync();
+      const manipulated = await renderedImage.saveAsync({
+        compress: 0.6,
+        format: SaveFormat.JPEG,
+        base64: true,
+      });
+
+      if (!manipulated.base64) {
+        ToastAndroid.show("No se pudo procesar la imagen seleccionada", ToastAndroid.SHORT);
+        return;
+      }
+
+      const dataUri = `data:image/jpeg;base64,${manipulated.base64}`;
       const { data } = await apis.uploadImage(dataUri, name || "platillo");
       if (data?.success && data?.url) {
         setImageUrl(data.url);
@@ -313,7 +325,7 @@ const MenuScreen = ({ navigation, route }) => {
         ToastAndroid.show("Error al subir la imagen", ToastAndroid.SHORT);
       }
     } catch (error) {
-      console.log("Error uploading image:", error);
+      console.log("Error picking/uploading image:", error);
       ToastAndroid.show("Error al subir la imagen", ToastAndroid.SHORT);
     } finally {
       setUploadingImage(false);
