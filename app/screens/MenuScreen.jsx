@@ -41,6 +41,10 @@ const MenuScreen = ({ navigation, route }) => {
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  // Vista previa local (archivo ya en el dispositivo, sin red) — evita
+  // volver a descargar/decodificar la imagen recién subida justo cuando la
+  // memoria ya está bajo presión por el procesamiento previo.
+  const [imagePreviewUri, setImagePreviewUri] = useState("");
   const [stock, setStock] = useState("");
   const [activeTab, setActiveTab] = useState("Menu");
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -133,6 +137,7 @@ const MenuScreen = ({ navigation, route }) => {
         setDescription(passedItem.description || "");
         setSelectedCategory(passedItem.category);
         setImageUrl(passedItem.imageUrl || "");
+        setImagePreviewUri("");
         setStock(passedItem.stock !== undefined ? String(Number(passedItem.stock)) : "0");
         setSelectedRecipeId(passedItem.recipeId || null);
         setSelectedProductId(passedItem.productId || null);
@@ -142,6 +147,7 @@ const MenuScreen = ({ navigation, route }) => {
         setPrice("");
         setDescription("");
         setImageUrl("");
+        setImagePreviewUri("");
         setStock("");
         setSelectedRecipeId(null);
         setSelectedProductId(null);
@@ -226,6 +232,7 @@ const MenuScreen = ({ navigation, route }) => {
       setPrice("");
       setDescription("");
       setImageUrl("");
+      setImagePreviewUri("");
       setStock("");
       setSelectedRecipeId(null);
       setSelectedProductId(null);
@@ -247,6 +254,7 @@ const MenuScreen = ({ navigation, route }) => {
     setDescription(item.description || "");
     setSelectedCategory(item.category);
     setImageUrl(item.imageUrl || "");
+    setImagePreviewUri("");
     setStock(item.stock ? String(Number(item.stock)) : "0");
     setSelectedRecipeId(item.recipeId || null);
     setSelectedProductId(item.productId || null);
@@ -305,8 +313,8 @@ const MenuScreen = ({ navigation, route }) => {
       console.log("[imagen] redimensionando...");
       let manipulated = await manipulateAsync(
         asset.uri,
-        [{ resize: { width: 1000 } }],
-        { compress: 0.5, format: SaveFormat.JPEG, base64: true }
+        [{ resize: { width: 800 } }],
+        { compress: 0.4, format: SaveFormat.JPEG, base64: true }
       );
       console.log("[imagen] redimensionada, base64 length:", manipulated.base64?.length);
 
@@ -322,8 +330,8 @@ const MenuScreen = ({ navigation, route }) => {
         console.log("[imagen] aún pesada, recomprimiendo...");
         manipulated = await manipulateAsync(
           manipulated.uri,
-          [{ resize: { width: 700 } }],
-          { compress: 0.35, format: SaveFormat.JPEG, base64: true }
+          [{ resize: { width: 600 } }],
+          { compress: 0.3, format: SaveFormat.JPEG, base64: true }
         );
         console.log("[imagen] recomprimida, base64 length:", manipulated.base64?.length);
       }
@@ -332,6 +340,11 @@ const MenuScreen = ({ navigation, route }) => {
         ToastAndroid.show("La imagen sigue siendo muy pesada, prueba con otra", ToastAndroid.SHORT);
         return;
       }
+
+      // Vista previa inmediata con el archivo local ya procesado — no
+      // requiere red, así que no se suma a la presión de memoria del paso
+      // de subida que viene a continuación.
+      setImagePreviewUri(manipulated.uri);
 
       const dataUri = `data:image/jpeg;base64,${manipulated.base64}`;
       console.log("[imagen] subiendo al servidor...");
@@ -421,9 +434,9 @@ const MenuScreen = ({ navigation, route }) => {
                   <ActivityIndicator size="small" color={theme.brand} />
                   <Text style={[styles.uploadText, { marginTop: 8 }]}>Subiendo imagen...</Text>
                 </View>
-              ) : imageUrl ? (
+              ) : imagePreviewUri || imageUrl ? (
                 <View style={styles.uploadedImageContainer}>
-                  <Image source={{ uri: imageUrl }} style={styles.uploadedImage} />
+                  <Image source={{ uri: imagePreviewUri || imageUrl }} style={styles.uploadedImage} />
                   <View style={styles.imageOverlay}>
                     <Feather name="refresh-cw" size={20} color="#FFF" />
                     <Text style={styles.changeImageText}>Cambiar</Text>
@@ -536,6 +549,7 @@ const MenuScreen = ({ navigation, route }) => {
                   setPrice("");
                   setDescription("");
                   setImageUrl("");
+                  setImagePreviewUri("");
                   setStock("");
                   setSelectedRecipeId(null);
                   setSelectedProductId(null);
