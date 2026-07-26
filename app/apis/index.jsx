@@ -41,8 +41,21 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && unauthorizedHandler) {
-      unauthorizedHandler();
+    if (error.response?.status === 401) {
+      console.log(
+        "[auth] 401 recibido, cerrando sesión. URL:",
+        error.config?.url,
+        "método:",
+        error.config?.method
+      );
+      if (unauthorizedHandler) unauthorizedHandler();
+    } else if (!error.response) {
+      console.log(
+        "[auth] request sin response (timeout/red). URL:",
+        error.config?.url,
+        "mensaje:",
+        error.message
+      );
     }
     return Promise.reject(error);
   }

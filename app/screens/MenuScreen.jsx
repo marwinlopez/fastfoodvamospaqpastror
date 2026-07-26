@@ -24,6 +24,7 @@ import ScreenHeader from "../components/ScreenHeader";
 import useTheme from "../hooks/useTheme";
 import useGlobal from "../hooks/useGlobal";
 import { calculateMaxProduction } from "../utils/recipeYield";
+import { suppressNextLock } from "../services/AppLockGuard";
 
 const MenuScreen = ({ navigation, route }) => {
   const theme = useTheme();
@@ -300,6 +301,10 @@ const MenuScreen = ({ navigation, route }) => {
       }
 
       console.log("[imagen] abriendo galería...");
+      // Abrir el picker manda la app a segundo plano brevemente — sin esto,
+      // el listener global de biometría lo interpreta como que el usuario
+      // salió de la app y la bloquea al volver.
+      suppressNextLock();
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
       });

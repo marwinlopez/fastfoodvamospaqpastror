@@ -6,6 +6,7 @@ import GlobalReducer, {
 } from "../hooks/GlobalReducer";
 import { BackgroundSyncService } from "../services/BackgroundSyncService";
 import AuthService from "../services/AuthService";
+import { isLockSuppressed } from "../services/AppLockGuard";
 import apis from "../apis";
 
 const GlobalContext = createContext();
@@ -63,6 +64,9 @@ const GlobalProvider = ({ children }) => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       const { isAuthenticated, biometricEnabled } = stateRef.current;
       if (nextState === "active" && isAuthenticated && biometricEnabled) {
+        // No bloquear si el segundo plano fue por algo esperado dentro del
+        // propio flujo (selector de imágenes, cámara), no por salir de la app.
+        if (isLockSuppressed()) return;
         dispatch(actionCreators.lock());
       }
     });
