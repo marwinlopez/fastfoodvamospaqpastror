@@ -13,6 +13,19 @@ export const convertUnits = (value, fromUnit, toUnit) => {
   return value;
 };
 
+// Precio de UNA unidad íntegra de un producto (ej. 1 botella), no del
+// empaque completo. precioCompra es el precio de todo el empaque, que
+// puede contener varias unidades (cantidadPresentacion × cantidadEmpaque) —
+// ej. una caja de 36 maltas a $17 son $0.47 cada una, no $17 cada una.
+// Mismo criterio que ya usa el servidor para el costo de un ingrediente.
+export const getProductUnitPrice = (product) => {
+  if (!product) return 0;
+  const price = parseFloat(product.precioCompra || 0);
+  const packQty = parseFloat(product.cantidadPresentacion || 1) || 1;
+  const unitQty = parseFloat(product.cantidadEmpaque || 1) || 1;
+  return price / (packQty * unitQty);
+};
+
 // Cuántas porciones de `rec` alcanza a producir el inventario actual,
 // recorriendo recursivamente sub-recetas. `prods` y `recs` deben incluir
 // los ingredientes de cada receta (no sirve el listado resumido de la API).

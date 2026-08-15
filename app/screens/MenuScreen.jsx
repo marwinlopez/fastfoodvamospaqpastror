@@ -23,7 +23,7 @@ import apis from "../apis";
 import ScreenHeader from "../components/ScreenHeader";
 import useTheme from "../hooks/useTheme";
 import useGlobal from "../hooks/useGlobal";
-import { calculateComboCapacity } from "../utils/recipeYield";
+import { calculateComboCapacity, getProductUnitPrice } from "../utils/recipeYield";
 import { suppressNextLock } from "../services/AppLockGuard";
 
 const MenuScreen = ({ navigation, route }) => {
@@ -267,7 +267,7 @@ const MenuScreen = ({ navigation, route }) => {
         totalPrice += (Number(recipe?.price) || 0) * qty;
       } else if (c.productId) {
         const product = productsList.find((p) => (p.productId || p.id) === c.productId);
-        totalPrice += (Number(product?.precioCompra) || 0) * qty;
+        totalPrice += getProductUnitPrice(product) * qty;
       }
     });
     setPrice(totalPrice.toFixed(2));
@@ -820,7 +820,7 @@ const MenuScreen = ({ navigation, route }) => {
                   >
                     <Text style={styles.modalItemName}>{isRecipe ? item.name : item.producto}</Text>
                     <Text style={[styles.modalItemMeta, { color: theme.textSecondary }]}>
-                      {money} {Number(isRecipe ? item.price : item.precioCompra || 0).toFixed(2)}
+                      {money} {(isRecipe ? Number(item.price || 0) : getProductUnitPrice(item)).toFixed(2)}
                     </Text>
                     {alreadyAdded && <Feather name="check-circle" size={18} color={theme.brand} />}
                   </TouchableOpacity>
